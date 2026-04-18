@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Hunter Elite</title>
+    <title>Scanner Elite Hunter</title>
     <style>
         :root { --neon: #00ff88; --blue: #00d9ff; --bg: #0a0c10; --card: #161b22; --red: #ff4444; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; text-align: center; }
@@ -18,11 +18,13 @@
         .stat-label { font-size: 0.7rem; color: #aaa; text-transform: uppercase; }
 
         .container { max-width: 450px; margin: 0 auto; padding: 10px; }
-        .card { background: var(--card); border-left: 5px solid var(--neon); margin-bottom: 12px; padding: 20px; border-radius: 8px; }
-        .teams { font-size: 1.2rem; font-weight: 900; display: block; margin-bottom: 8px; }
-        .date-time { color: var(--blue); font-size: 0.9rem; font-weight: bold; }
+        .card { background: var(--card); border-left: 5px solid var(--neon); margin-bottom: 12px; padding: 15px; border-radius: 8px; text-align: left; }
         
-        .res-badge { display: inline-block; margin-top: 15px; padding: 8px; border-radius: 5px; font-weight: 900; width: 100%; font-size: 1rem; }
+        .league { color: var(--neon); font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block; }
+        .teams { font-size: 1.15rem; font-weight: 900; display: block; margin-bottom: 8px; color: #fff; }
+        .date-time { color: var(--blue); font-size: 0.9rem; font-weight: bold; display: block; }
+        
+        .res-badge { display: block; margin-top: 15px; padding: 8px; border-radius: 5px; font-weight: 900; text-align: center; font-size: 1rem; text-transform: uppercase; }
         .green-bg { background: var(--neon); color: #000; }
         .red-bg { background: var(--red); color: #fff; }
     </style>
@@ -42,7 +44,7 @@
 </div>
 
 <div id="display" class="container">
-    <div style="padding:40px; opacity:0.5">Sincronizando...</div>
+    <div style="padding:40px; opacity:0.5">Buscando Jogos...</div>
 </div>
 
 <script>
@@ -54,8 +56,8 @@
 
     function setTab(t) {
         currentTab = t;
-        document.getElementById('btn-gols').classList.toggle('active', t === 'gols');
-        document.getElementById('btn-res').classList.toggle('active', t === 'res');
+        document.getElementById('btn-gols').className = t === 'gols' ? 'nav-btn active' : 'nav-btn';
+        document.getElementById('btn-res').className = t === 'res' ? 'nav-btn active' : 'nav-btn';
         document.getElementById('stats-header').style.display = (t === 'res') ? 'flex' : 'none';
         render();
     }
@@ -81,8 +83,9 @@
         let gCount = 0, rCount = 0;
 
         matches.forEach(m => {
-            const h = m.homeTeam.shortName || m.homeTeam.name;
-            const a = m.awayTeam.shortName || m.awayTeam.name;
+            const league = m.competition.name;
+            const h = m.homeTeam.name;
+            const a = m.awayTeam.name;
             const date = new Date(m.utcDate).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
             const time = new Date(m.utcDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
@@ -90,8 +93,9 @@
                 if (currentTab === 'gols' && m.status !== 'FINISHED') {
                     box.innerHTML += `
                         <div class="card">
-                            <span class="teams">${h} x ${away = a}</span>
-                            <span class="date-time">${date} - ${time}</span>
+                            <span class="league">🏆 ${league}</span>
+                            <span class="teams">${h} x ${a}</span>
+                            <span class="date-time">📅 ${date} - ⏰ ${time}</span>
                         </div>`;
                 } else if (currentTab === 'res' && m.status === 'FINISHED') {
                     const scH = m.score.fullTime.home, scA = m.score.fullTime.away;
@@ -100,8 +104,9 @@
                     
                     box.innerHTML += `
                         <div class="card" style="border-left-color: ${isGreen ? 'var(--neon)' : 'var(--red)'}">
+                            <span class="league">🏆 ${league}</span>
                             <span class="teams">${h} ${scH} - ${scA} ${a}</span>
-                            <span class="date-time">${date} - ${time}</span>
+                            <span class="date-time">📅 ${date} - ⏰ ${time}</span>
                             <div class="res-badge ${isGreen ? 'green-bg' : 'red-bg'}">
                                 ${isGreen ? 'GREEN ✅' : 'RED ❌'}
                             </div>
@@ -113,7 +118,7 @@
         document.getElementById('total-green').innerText = gCount;
         document.getElementById('total-red').innerText = rCount;
         
-        if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Sem dados.</div>';
+        if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Sem jogos no momento.</div>';
     }
 
     load();
