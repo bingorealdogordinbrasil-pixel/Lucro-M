@@ -3,110 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Hunter VIP</title>
+    <title>Scanner DHTML Lucro-M</title>
     <style>
-        :root { --neon-green: #00ff88; --bg-dark: #0a0c10; --card-bg: #161b22; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-dark); color: #fff; margin: 0; padding: 0; text-align: center; }
-        .sticky-header { position: sticky; top: 0; background: var(--bg-dark); padding: 15px; border-bottom: 2px solid var(--neon-green); z-index: 100; }
-        .tabs { display: flex; gap: 10px; max-width: 450px; margin: 0 auto; }
-        .tab-btn { flex: 1; background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 12px; cursor: pointer; font-weight: bold; border-radius: 8px; }
-        .tab-btn.active { background: var(--neon-green); color: #000; border-color: var(--neon-green); }
+        :root { --neon: #00ff88; --blue: #00d9ff; --bg: #0a0c10; --card: #161b22; }
+        body { font-family: sans-serif; background: var(--bg); color: #fff; margin: 0; text-align: center; }
+        .header { position: sticky; top: 0; background: var(--bg); padding: 15px; border-bottom: 2px solid var(--neon); z-index: 10; }
+        .nav { display: flex; gap: 5px; max-width: 450px; margin: 0 auto; }
+        .nav-btn { flex: 1; padding: 12px; background: #222; border: 1px solid #333; color: #888; font-weight: bold; border-radius: 8px; border: none; }
+        .nav-btn.active { background: var(--neon); color: #000; box-shadow: 0 0 10px var(--neon); }
         .container { max-width: 450px; margin: 0 auto; padding: 10px; }
-        .date-badge { background: #1f2937; color: #00d9ff; padding: 5px 15px; border-radius: 20px; font-weight: bold; margin: 15px 0; display: inline-block; font-size: 0.9rem; }
-        .match-card { background: var(--card-bg); border-left: 4px solid var(--neon-green); border-radius: 10px; padding: 15px; margin-bottom: 15px; }
-        .teams { font-size: 1.1rem; font-weight: 900; margin-bottom: 10px; display: block; }
-        .info-box { border: 1px dashed var(--neon-green); border-radius: 8px; padding: 10px; margin: 10px 0; text-align: left; }
-        .trend-line { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; }
-        .val { color: var(--neon-green); font-weight: bold; }
-        .time-badge { background: #002b36; color: #00d9ff; padding: 3px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; }
-        .status { padding: 5px 10px; border-radius: 5px; font-weight: bold; display: inline-block; margin-top: 10px; }
-        .win { border: 1px solid var(--neon-green); color: var(--neon-green); }
-        .loss { border: 1px solid #ff4444; color: #ff4444; }
+        .card { background: var(--card); border-left: 5px solid var(--neon); margin-bottom: 12px; padding: 15px; border-radius: 8px; }
+        .teams { font-size: 1.1rem; font-weight: bold; display: block; margin-bottom: 5px; }
+        .badge { background: rgba(0,255,136,0.1); border: 1px dashed var(--neon); color: var(--neon); padding: 8px; display: block; margin: 10px 0; border-radius: 4px; font-size: 0.8rem; }
+        .time { color: var(--blue); font-weight: bold; font-size: 0.9rem; }
+        .win { color: var(--neon); font-weight: bold; }
+        .loss { color: #ff4444; font-weight: bold; }
+        .loading { padding: 40px; opacity: 0.5; font-style: italic; }
     </style>
 </head>
 <body>
 
-<div class="sticky-header">
-    <div class="tabs">
-        <button id="btn-gols" class="tab-btn active" onclick="switchTab('gols')">🔥 GOLS 1.5</button>
-        <button id="btn-res" class="tab-btn" onclick="switchTab('res')">📊 RESULTADOS</button>
+<div class="header">
+    <div class="nav">
+        <button id="btn-gols" class="nav-btn active" onclick="setTab('gols')">🔥 GOLS 1.5</button>
+        <button id="btn-res" class="nav-btn" onclick="setTab('res')">📊 RESULTADOS</button>
     </div>
 </div>
 
-<div class="container" id="app">
-    <div style="padding:50px; opacity:0.5">Sincronizando DHTML...</div>
+<div id="output" class="container">
+    <div class="loading">Sincronizando DHTML com servidor...</div>
 </div>
 
 <script>
     const API_KEY = '9aad45346ed6479c9255ee70aab28f05';
-    // Esse PROXY é o que faz o site funcionar no GitHub sem erro de conexão
-    const PROXY = 'https://api.allorigins.win/raw?url=';
+    // Mudei para um Proxy mais rápido e direto
+    const PROXY = 'https://corsproxy.io/?'; 
     
     let matches = [];
     let currentTab = 'gols';
 
-    function switchTab(t) {
+    function setTab(t) {
         currentTab = t;
-        document.getElementById('btn-gols').className = t === 'gols' ? 'tab-btn active' : 'tab-btn';
-        document.getElementById('btn-res').className = t === 'res' ? 'tab-btn active' : 'tab-btn';
+        document.getElementById('btn-gols').classList.toggle('active', t === 'gols');
+        document.getElementById('btn-res').classList.toggle('active', t === 'res');
         render();
     }
 
-    async function getData() {
+    async function loadData() {
         const today = new Date().toISOString().split('T')[0];
         const end = new Date(); end.setDate(end.getDate() + 2);
         const endStr = end.toISOString().split('T')[0];
-        const url = `https://api.football-data.org/v4/matches?dateFrom=${today}&dateTo=${endStr}`;
-
+        
+        const apiUrl = `https://api.football-data.org/v4/matches?dateFrom=${today}&dateTo=${endStr}`;
+        
         try {
-            const r = await fetch(PROXY + encodeURIComponent(url), { headers: { 'X-Auth-Token': API_KEY } });
+            // O segredo está aqui: o corsproxy.io é mais estável para GitHub
+            const r = await fetch(PROXY + encodeURIComponent(apiUrl), {
+                headers: { 'X-Auth-Token': API_KEY }
+            });
+            
+            if (!r.ok) throw new Error();
             const d = await r.json();
             matches = d.matches || [];
             render();
         } catch (e) {
-            document.getElementById('app').innerHTML = '<div style="color:#ff4444;padding:20px">Erro de conexão com o servidor.</div>';
+            console.error(e);
+            document.getElementById('output').innerHTML = `
+                <div style="padding:20px; color:#ff4444;">
+                    Erro de conexão. <br>
+                    <button onclick="loadData()" style="margin-top:10px; padding:8px; background:var(--neon); border:none; border-radius:5px; font-weight:bold;">TENTAR NOVAMENTE</button>
+                </div>`;
         }
     }
 
     function render() {
-        const app = document.getElementById('app');
-        app.innerHTML = '';
-        let lastDate = '';
+        const box = document.getElementById('output');
+        box.innerHTML = ''; 
 
         matches.forEach(m => {
             const h = m.homeTeam.shortName || m.homeTeam.name;
             const a = m.awayTeam.shortName || m.awayTeam.name;
-            const date = new Date(m.utcDate).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
             const time = new Date(m.utcDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-
+            
+            // Lógica de seleção Noêmia
             if (m.id % 10 >= 4) {
                 if (currentTab === 'gols' && m.status !== 'FINISHED') {
-                    if(lastDate !== date) { app.innerHTML += `<div class="date-badge">🗓️ JOGOS DE ${date}</div>`; lastDate = date; }
-                    app.innerHTML += `
-                        <div class="match-card">
+                    box.innerHTML += `
+                        <div class="card">
                             <span class="teams">${h} x ${a}</span>
-                            <div class="info-box">
-                                <div class="trend-line"><span>Tendência Over 1.5:</span><span class="val">ALTA 🔥</span></div>
-                                <div class="trend-line"><span>Média Gols:</span><span class="val">${(2 + Math.random()).toFixed(2)}</span></div>
-                            </div>
-                            <span class="time-badge">⏰ ${time}</span>
+                            <span class="badge">TENDÊNCIA: GOLS 1.5 ALTA 🔥</span>
+                            <span class="time">⏰ ${time}</span>
                         </div>`;
                 } else if (currentTab === 'res' && m.status === 'FINISHED') {
-                    const scH = m.score.fullTime.home;
-                    const scA = m.score.fullTime.away;
-                    const isWin = (scH + scA >= 2);
-                    app.innerHTML += `
-                        <div class="match-card" style="border-color: ${isWin ? '#00ff88' : '#ff4444'}">
-                            <span class="teams">${h} ${scH} - ${scA} ${a}</span>
-                            <span class="status ${isWin ? 'win' : 'loss'}">${isWin ? 'GREEN ✅' : 'RED ❌'}</span>
+                    const scoreH = m.score.fullTime.home;
+                    const scoreA = m.score.fullTime.away;
+                    const isWin = (scoreH + scoreA >= 2);
+                    box.innerHTML += `
+                        <div class="card" style="border-color: ${isWin ? 'var(--neon)' : '#ff4444'}">
+                            <span class="teams">${h} ${scoreH} - ${scoreA} ${a}</span>
+                            <span class="${isWin ? 'win' : 'loss'}">${isWin ? 'GREEN ✅' : 'RED ❌'}</span>
                         </div>`;
                 }
             }
         });
+        
+        if(box.innerHTML === '') {
+            box.innerHTML = '<div class="loading">Aguardando próximos jogos...</div>';
+        }
     }
 
-    getData();
-    setInterval(getData, 60000);
+    loadData();
+    setInterval(loadData, 30000); // Atualiza a cada 30 segundos
 </script>
 </body>
 </html>
