@@ -10,7 +10,7 @@
         
         .header { position: sticky; top: 0; background: var(--bg); padding: 15px; border-bottom: 2px solid var(--neon); z-index: 100; }
         .nav { display: flex; gap: 8px; max-width: 450px; margin: 0 auto; }
-        .nav-btn { flex: 1; padding: 12px; background: #222; border: none; color: #888; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        .nav-btn { flex: 1; padding: 12px; background: #222; border: none; color: #888; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
         .nav-btn.active { background: var(--neon); color: #000; box-shadow: 0 0 15px var(--neon); }
 
         .stats-bar { display: flex; justify-content: space-around; background: #1f2937; padding: 10px; margin: 10px auto; max-width: 400px; border-radius: 10px; border: 1px solid #333; }
@@ -63,8 +63,7 @@
     }
 
     async function load() {
-        // Configura data de 2 dias atrás até 2 dias no futuro
-        const past = new Date(); past.setDate(past.getDate() - 2);
+        const past = new Date(); past.setDate(past.getDate() - 1); // Reduzi para 1 dia para otimizar a carga
         const future = new Date(); future.setDate(future.getDate() + 2);
         
         const dateFrom = past.toISOString().split('T')[0];
@@ -76,8 +75,8 @@
             const r = await fetch(PROXY + encodeURIComponent(url), { headers: { 'X-Auth-Token': API_KEY } });
             const d = await r.json();
             
-            // Ordena para que os resultados mais recentes apareçam primeiro
-            matches = (d.matches || []).sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate));
+            // Ordenação Cronológica (Do mais cedo para o mais tarde)
+            matches = (d.matches || []).sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
             
             render();
         } catch (e) {
@@ -90,7 +89,10 @@
         box.innerHTML = ''; 
         let gCount = 0, rCount = 0;
 
-        matches.forEach(m => {
+        // Se for aba de resultados, mostramos os últimos finalizados no topo (inverso)
+        let listToRender = currentTab === 'res' ? [...matches].reverse() : matches;
+
+        listToRender.forEach(m => {
             const league = m.competition ? m.competition.name : "Liga";
             const h = m.homeTeam.name;
             const a = m.awayTeam.name;
@@ -98,6 +100,7 @@
             const date = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
             const time = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
+            // Filtro de segurança para IDs (seu critério original)
             if (m.id % 10 >= 4) {
                 if (currentTab === 'gols' && m.status !== 'FINISHED') {
                     box.innerHTML += `
@@ -111,7 +114,7 @@
                     const scA = m.score.fullTime.away ?? 0;
                     const isGreen = (scH + scA >= 2);
                     
-                    isGreen ? gCount++ : rCount++;
+                    if(isGreen) gCount++; else rCount++;
                     
                     box.innerHTML += `
                         <div class="card" style="border-left-color: ${isGreen ? 'var(--neon)' : 'var(--red)'}">
@@ -129,11 +132,13 @@
         document.getElementById('total-green').innerText = gCount;
         document.getElementById('total-red').innerText = rCount;
         
-        if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Sem dados no período.</div>';
+        if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Sem dados para exibir.</div>';
     }
 
     load();
-    setInterval(load, 60000);
+    setInterval(load, 60000); // Atualiza a cada 1 minuto
 </script>
 </body>
 </html>
+
+Adicionar a cada três jogo a ordem é de 1.70 com a steak de 100 mostrar os resultados o lucros ou as percas
