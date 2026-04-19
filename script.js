@@ -14,20 +14,20 @@ async function load() {
     const today = new Date().toISOString().split('T')[0];
     const url = `https://api.football-data.org/v4/matches?dateFrom=${today}&dateTo=${today}`;
     
+    // Usando uma ponte via Fetch API que ignora o bloqueio de CORS (Proxy Direto)
     try {
-        // Usando o proxy CORS-Anywhere ou similar via AllOrigins de forma limpa
-        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}&t=${new Date().getTime()}`);
-        const data = await response.json();
-        const parsedData = JSON.parse(data.contents);
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        const result = await response.json();
+        const data = JSON.parse(result.contents);
 
-        if (parsedData.matches && parsedData.matches.length > 0) {
-            matches = parsedData.matches;
+        if (data && data.matches) {
+            matches = data.matches;
             render();
         } else {
-            document.getElementById('display').innerHTML = '<div style="padding:50px; opacity:0.4;">Nenhum jogo disponível na API agora.</div>';
+            throw new Error('Sem jogos');
         }
     } catch (e) {
-        document.getElementById('display').innerHTML = '<div style="color:var(--red);padding:20px;">Erro de conexão. Tente recarregar em 1 minuto.</div>';
+        document.getElementById('display').innerHTML = '<div style="color:var(--red);padding:20px">Limite atingido. Aguarde 60 segundos...</div>';
     }
 }
 
@@ -36,45 +36,43 @@ function render() {
     box.innerHTML = '';
     let g = 0, r = 0;
 
-    // Inverte para os mais novos/recentes ficarem no topo
-    const sorted = [...matches].reverse();
+    if (matches.length === 0) {
+        box.innerHTML = '<div style="padding:50px; opacity:0.3;">Nenhum jogo encontrado para hoje.</div>';
+        return;
+    }
 
-    sorted.forEach(m => {
+    const list = [...matches].reverse();
+
+    list.forEach(m => {
         const time = new Date(m.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
         if (currentTab === 'gols' && m.status !== 'FINISHED') {
             box.innerHTML += `
                 <div class="card">
                     <span class="league">🏆 ${m.competition.name}</span>
-                    <span class="teams">${m.homeTeam.shortName || m.homeTeam.name} x ${m.awayTeam.shortName || m.awayTeam.name}</span>
+                    <span class="teams">${m.homeTeam.name} x ${m.awayTeam.name}</span>
                     <span class="date-time">⏰ HOJE ÀS ${time}</span>
                 </div>`;
         } 
         else if (currentTab === 'res' && m.status === 'FINISHED') {
-            const scH = m.score.fullTime.home || 0;
-            const scA = m.score.fullTime.away || 0;
-            const isGreen = (scH + scA >= 2);
-            isGreen ? g++ : r++;
+            const h = m.score.fullTime.home || 0;
+            const a = m.score.fullTime.away || 0;
+            const win = (h + a >= 2);
+            win ? g++ : r++;
 
             box.innerHTML += `
-                <div class="card" style="border-left-color: ${isGreen ? 'var(--neon)' : 'var(--red)'}">
+                <div class="card" style="border-left-color: ${win ? 'var(--neon)' : 'var(--red)'}">
                     <span class="league">🏆 ${m.competition.name}</span>
-                    <span class="teams">${m.homeTeam.shortName || m.homeTeam.name} ${scH} - ${scA} ${m.awayTeam.shortName || m.awayTeam.name}</span>
+                    <span class="teams">${m.homeTeam.name} ${h} - ${a} ${m.awayTeam.name}</span>
                     <span class="date-time">🏁 FINALIZADO (${time})</span>
-                    <div class="res-badge ${isGreen ? 'green-bg' : 'red-bg'}">${isGreen ? 'GREEN ✅' : 'RED ❌'}</div>
+                    <div class="res-badge ${win ? 'green-bg' : 'red-bg'}">${win ? 'GREEN ✅' : 'RED ❌'}</div>
                 </div>`;
         }
     });
 
     document.getElementById('total-green').innerText = g;
     document.getElementById('total-red').innerText = r;
-    
-    if (box.innerHTML === '') {
-        box.innerHTML = '<div style="padding:50px; opacity:0.3;">Buscando novos dados...</div>';
-    }
 }
 
-// Inicializa
 load();
-// Atualiza a cada 3 minutos para não ser banido pela API
-setInterval(load, 180000);
+setInterval(load, 180000); // 3 minutos para não ser banido
