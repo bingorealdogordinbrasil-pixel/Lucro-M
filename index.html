@@ -3,31 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Elite Hunter</title>
+    <title>Elite Hunter Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="header">
     <div class="nav">
-        <button id="btn-gols" class="nav-btn active" onclick="setTab('gols')">JOGOS 1.5</button>
+        <button id="btn-gols" class="nav-btn active" onclick="setTab('gols')">PRÓXIMOS JOGOS</button>
         <button id="btn-res" class="nav-btn" onclick="setTab('res')">RESULTADOS HOJE</button>
     </div>
 </div>
 
 <div id="stats-header" class="stats-bar" style="display: none;">
-    <div style="text-align:center">
-        <span id="total-green" class="stat-val" style="color:var(--neon)">0</span><br>
-        <span class="stat-label">Greens</span>
-    </div>
-    <div style="text-align:center">
-        <span id="total-red" class="stat-val" style="color:var(--red)">0</span><br>
-        <span class="stat-label">Reds</span>
-    </div>
+    <div style="text-align:center"><span id="total-green" class="stat-val" style="color:var(--neon)">0</span><br><span class="stat-label">Greens</span></div>
+    <div style="text-align:center"><span id="total-red" class="stat-val" style="color:var(--red)">0</span><br><span class="stat-label">Reds</span></div>
 </div>
 
 <div id="display" class="container">
-    <div style="padding:40px; opacity:0.5">Sincronizando jogos de hoje...</div>
+    <div id="loading" style="padding:50px; opacity:0.6;">Conectando ao Radar...</div>
 </div>
 
 <script src="script.js"></script>
