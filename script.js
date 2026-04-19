@@ -1,5 +1,6 @@
 const API_KEY = '9aad45346ed6479c9255ee70aab28f05';
-const PROXY = 'https://api.allorigins.win/raw?url='; // Mudamos o proxy para um mais estável
+// Novo Proxy mais estável
+const PROXY = 'https://cors-anywhere.herokuapp.com/'; 
 
 let matches = [];
 let currentTab = 'gols';
@@ -24,24 +25,26 @@ async function load() {
     const apiUrl = `https://api.football-data.org/v4/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`;
     
     try {
-        const response = await fetch(PROXY + encodeURIComponent(apiUrl), {
+        const response = await fetch(apiUrl, {
             headers: { 'X-Auth-Token': API_KEY }
         });
 
-        if (response.status === 429) {
-            throw new Error('Muitas requisições. Aguarde um minuto.');
-        }
+        if (!response.ok) throw new Error('Erro na API');
 
         const data = await response.json();
         matches = data.matches || [];
         render();
     } catch (e) {
-        console.error(e);
-        document.getElementById('display').innerHTML = `
-            <div style="color:var(--red);padding:20px">
-                Erro ao carregar dados.<br>
-                <small>Limite da API atingido ou problema no servidor. Tentando novamente em breve...</small>
-            </div>`;
+        // Se falhar o fetch direto, tentamos via proxy AllOrigins
+        try {
+            const altResponse = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`);
+            const altData = await altResponse.json();
+            const finalData = JSON.parse(altData.contents);
+            matches = finalData.matches || [];
+            render();
+        } catch (err) {
+            document.getElementById('display').innerHTML = '<div style="color:#ff4444;padding:20px">Limite de requisições excedido. Aguarde 1 minuto e recarregue.</div>';
+        }
     }
 }
 
@@ -72,7 +75,6 @@ function render() {
                 const scH = m.score.fullTime.home;
                 const scA = m.score.fullTime.away;
                 const isGreen = (scH + scA >= 2); 
-                
                 isGreen ? gCount++ : rCount++;
                 
                 box.innerHTML += `
@@ -80,9 +82,7 @@ function render() {
                         <span class="league">🏆 ${league}</span>
                         <span class="teams">${h} ${scH} - ${scA} ${a}</span>
                         <span class="date-time">📅 ${date} - ⏰ ${time}</span>
-                        <div class="res-badge ${isGreen ? 'green-bg' : 'red-bg'}">
-                            ${isGreen ? 'GREEN ✅' : 'RED ❌'}
-                        </div>
+                        <div class="res-badge ${isGreen ? 'green-bg' : 'red-bg'}">${isGreen ? 'GREEN ✅' : 'RED ❌'}</div>
                     </div>`;
             }
         }
@@ -90,10 +90,8 @@ function render() {
 
     document.getElementById('total-green').innerText = gCount;
     document.getElementById('total-red').innerText = rCount;
-    
-    if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Nenhum registro encontrado.</div>';
+    if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Sem dados.</div>';
 }
 
 load();
-// Atualizando a cada 2 minutos (120000ms) para respeitar o limite da API grátis
-setInterval(load, 120000);
+setInterval(load, 150000); // 2.5 minutos para evitar ban da API
