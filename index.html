@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Elite Hunter - Odd 1.85</title>
+    <title>Scanner Elite Hunter - Tempo Real</title>
     <style>
         :root { --neon: #00ff88; --blue: #00d9ff; --bg: #0a0c10; --card: #161b22; --red: #ff4444; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; text-align: center; }
@@ -28,6 +28,8 @@
 
         .league { color: var(--neon); font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block; }
         .teams { font-size: 1.15rem; font-weight: 900; display: block; margin-bottom: 8px; color: #fff; }
+        .time-badge { background: var(--red); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 5px; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
@@ -72,7 +74,6 @@
     async function load() {
         const d = new Date();
         const hoje = d.toISOString().split('T')[0];
-        // Busca um dia antes e depois para garantir que o fuso horário não esconda nada de "hoje"
         d.setDate(d.getDate() - 1);
         const ontem = d.toISOString().split('T')[0];
         d.setDate(d.getDate() + 2);
@@ -83,11 +84,10 @@
         try {
             const r = await fetch(PROXY + encodeURIComponent(url), { headers: { 'X-Auth-Token': API_KEY } });
             const data = await r.json();
-            // ORDENA TUDO POR HORÁRIO
             matches = (data.matches || []).sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
             render();
         } catch (e) {
-            document.getElementById('display').innerHTML = 'Erro ao conectar. Verifique a internet.';
+            document.getElementById('display').innerHTML = 'Erro ao conectar.';
         }
     }
 
@@ -99,13 +99,11 @@
         const agora = new Date();
         const hojeLocal = agora.toLocaleDateString('pt-BR');
 
-        // 1. Filtra apenas jogos que são do seu robô (ID) e que acontecem HOJE
         let validMatches = matches.filter(m => {
             const dataJogo = new Date(m.utcDate).toLocaleDateString('pt-BR');
             return m.id % 10 >= 4 && dataJogo === hojeLocal;
         });
 
-        // 2. Monta os lotes de 3 em 3 da fila de hoje
         for (let i = 0; i < validMatches.length; i += 3) {
             let group = validMatches.slice(i, i + 3);
             if (group.length < 3) continue;
@@ -113,27 +111,38 @@
             let bilheteFinalizado = group.every(m => m.status === 'FINISHED' || m.status === 'POSTPONED');
 
             if (currentTab === 'gols') {
-                // MOSTRA SE: Não terminou (está em pré-jogo ou ao vivo)
                 if (!bilheteFinalizado) {
                     let html = `<div class="group-container"><div class="group-header">LOTE HORÁRIO: ${new Date(group[0].utcDate).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>`;
                     group.forEach(m => {
                         let status = (m.status === 'IN_PLAY' || m.status === 'LIVE' || m.status === 'PAUSED') ? 'AO VIVO' : 'PRÉ-JOGO';
                         let scH = m.score.fullTime.home ?? 0;
                         let scA = m.score.fullTime.away ?? 0;
+                        
+                        // CÁLCULO DO TEMPO (Estimado se a API não enviar o minuto exato)
+                        let tempoTexto = "";
+                        if(status === 'AO VIVO' && m.lastUpdated) {
+                             let inicio = new Date(m.utcDate);
+                             let diff = Math.floor((agora - inicio) / 60000);
+                             if (diff > 0 && diff < 120) {
+                                 // Ajuste simples para intervalo
+                                 if (diff > 45 && diff < 60) tempoTexto = "INT";
+                                 else tempoTexto = (diff > 60 ? diff - 15 : diff) + "'";
+                             }
+                        }
+
                         let teamsText = status === 'AO VIVO' ? `${m.homeTeam.name} ${scH} - ${scA} ${m.awayTeam.name}` : `${m.homeTeam.name} x ${m.awayTeam.name}`;
                         
                         html += `
                             <div class="card" style="margin-bottom:0; border-radius:0; border-bottom:1px solid #222; border-left-color: ${status === 'AO VIVO' ? 'var(--blue)' : 'var(--neon)'}">
                                 <span class="league">🏆 ${m.competition.name}</span>
-                                <span class="teams">${teamsText}</span>
+                                <span class="teams">${teamsText} ${tempoTexto ? `<span class="time-badge">${tempoTexto}</span>` : ''}</span>
                                 <span style="color:var(--blue); font-size:0.85rem;">⏰ ${new Date(m.utcDate).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} ${status === 'AO VIVO' ? ' ● ' + status : ''}</span>
                             </div>`;
                     });
-                    html += `<div class="group-footer" style="color:var(--neon); font-size:0.8rem; text-align:center">FILA ATIVA DE HOJE</div></div>`;
+                    html += `<div class="group-footer" style="color:var(--neon); font-size:0.8rem; text-align:center">ACOMPANHANDO</div></div>`;
                     box.innerHTML += html;
                 }
             } else {
-                // RESULTADOS: Apenas o que já fechou os 3 jogos
                 if (bilheteFinalizado) {
                     let winB = true;
                     let html = `<div class="group-container"><div class="group-header">FINALIZADO HOJE</div>`;
@@ -159,11 +168,11 @@
         pEl.innerText = `R$ ${profit.toFixed(2)}`;
         pEl.style.color = profit >= 0 ? 'var(--neon)' : 'var(--red)';
         
-        if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Nenhum lote de 3 jogos encontrado para hoje.</div>';
+        if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Sem lotes para hoje.</div>';
     }
 
     load();
-    setInterval(load, 60000);
+    setInterval(load, 30000); // Atualiza a cada 30 segundos para o tempo correr mais preciso
 </script>
 </body>
 </html>
