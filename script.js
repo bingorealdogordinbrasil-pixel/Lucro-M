@@ -1,5 +1,5 @@
 const API_KEY = '9aad45346ed6479c9255ee70aab28f05';
-const PROXY = 'https://corsproxy.io/?'; 
+const PROXY = 'https://api.allorigins.win/raw?url='; // Mudamos o proxy para um mais estável
 
 let matches = [];
 let currentTab = 'gols';
@@ -13,7 +13,6 @@ function setTab(t) {
 }
 
 async function load() {
-    // Busca dados de 3 dias atrás até amanhã (para cobrir fusos horários)
     const dateStart = new Date();
     dateStart.setDate(dateStart.getDate() - 3);
     const dateFrom = dateStart.toISOString().split('T')[0];
@@ -22,15 +21,27 @@ async function load() {
     dateEnd.setDate(dateEnd.getDate() + 1);
     const dateTo = dateEnd.toISOString().split('T')[0];
 
-    const url = `https://api.football-data.org/v4/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+    const apiUrl = `https://api.football-data.org/v4/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`;
     
     try {
-        const r = await fetch(PROXY + encodeURIComponent(url), { headers: { 'X-Auth-Token': API_KEY } });
-        const d = await r.json();
-        matches = d.matches || [];
+        const response = await fetch(PROXY + encodeURIComponent(apiUrl), {
+            headers: { 'X-Auth-Token': API_KEY }
+        });
+
+        if (response.status === 429) {
+            throw new Error('Muitas requisições. Aguarde um minuto.');
+        }
+
+        const data = await response.json();
+        matches = data.matches || [];
         render();
     } catch (e) {
-        document.getElementById('display').innerHTML = '<div style="color:red;padding:20px">Erro ao carregar histórico.</div>';
+        console.error(e);
+        document.getElementById('display').innerHTML = `
+            <div style="color:var(--red);padding:20px">
+                Erro ao carregar dados.<br>
+                <small>Limite da API atingido ou problema no servidor. Tentando novamente em breve...</small>
+            </div>`;
     }
 }
 
@@ -39,7 +50,6 @@ function render() {
     box.innerHTML = ''; 
     let gCount = 0, rCount = 0;
 
-    // Inverte a ordem para mostrar os jogos mais recentes no topo
     const sortedMatches = [...matches].reverse();
 
     sortedMatches.forEach(m => {
@@ -50,7 +60,6 @@ function render() {
         const date = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
         const time = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
-        // Mantém seu filtro original baseado no ID do jogo
         if (m.id % 10 >= 4) {
             if (currentTab === 'gols' && m.status !== 'FINISHED') {
                 box.innerHTML += `
@@ -86,4 +95,5 @@ function render() {
 }
 
 load();
-setInterval(load, 120000); // Atualiza a cada 2 minutos
+// Atualizando a cada 2 minutos (120000ms) para respeitar o limite da API grátis
+setInterval(load, 120000);
