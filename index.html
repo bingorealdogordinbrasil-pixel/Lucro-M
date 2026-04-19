@@ -53,7 +53,7 @@
 </div>
 
 <div id="display" class="container">
-    <div style="padding:40px; opacity:0.5">Sincronizando tempo real...</div>
+    <div style="padding:40px; opacity:0.5">Sincronizando AO VIVO...</div>
 </div>
 
 <script>
@@ -86,13 +86,12 @@
             const data = await r.json();
             matches = (data.matches || []).sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
             render();
-        } catch (e) { console.error("Erro"); }
+        } catch (e) { console.error("Erro na carga"); }
     }
 
     function render() {
         const box = document.getElementById('display');
         let greenB = 0, redB = 0, profit = 0;
-        const STAKE = 100, ODD = 1.85;
         const agora = new Date();
         const hojeLocal = agora.toLocaleDateString('pt-BR');
 
@@ -115,42 +114,40 @@
                     let html = `<div class="group-container"><div class="group-header">HORÁRIO DO PRIMEIRO JOGO: ${horaPrimeiro}</div>`;
                     
                     group.forEach(m => {
-                        let isLive = (m.status === 'IN_PLAY' || m.status === 'LIVE' || m.status === 'PAUSED');
+                        const inicio = new Date(m.utcDate);
+                        const diff = Math.floor((agora - inicio) / 60000);
+                        
+                        // NOVO: Se a hora do jogo chegou ou passou, consideramos AO VIVO (até 120min)
+                        let isLiveForce = (diff >= 0 && diff < 120 && m.status !== 'FINISHED');
                         let scH = m.score.fullTime.home ?? 0;
                         let scA = m.score.fullTime.away ?? 0;
-                        let horaJogo = new Date(m.utcDate).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                        let horaJogo = inicio.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                         
                         let tempoTexto = "";
-                        if(isLive) {
-                             let inicio = new Date(m.utcDate);
-                             let diff = Math.floor((agora - inicio) / 60000);
-                             
-                             // Lógica Sincronizada
-                             if (diff >= 0 && diff <= 45) {
+                        if(isLiveForce) {
+                             if (diff <= 45) {
                                  tempoTexto = diff + "'";
                              } else if (diff > 45 && diff <= 60) {
-                                 tempoTexto = "INT"; // Intervalo
-                             } else if (diff > 60) {
-                                 tempoTexto = (diff - 15) + "'"; // Subtrai o intervalo para o 2º tempo
+                                 tempoTexto = "INT"; 
+                             } else {
+                                 tempoTexto = (diff - 15) + "'"; 
                              }
-                             if (m.status === 'PAUSED') tempoTexto = "INT";
                         }
 
-                        let placarOuX = isLive ? `${scH} - ${scA}` : `x`;
+                        let placarOuX = isLiveForce ? `${scH} - ${scA}` : `x`;
                         let teamsText = `${horaJogo} | ${m.homeTeam.name} ${placarOuX} ${m.awayTeam.name}`;
                         
                         html += `
-                            <div class="card" style="margin-bottom:0; border-radius:0; border-bottom:1px solid #222; border-left-color: ${isLive ? 'var(--blue)' : 'var(--neon)'}">
+                            <div class="card" style="margin-bottom:0; border-radius:0; border-bottom:1px solid #222; border-left-color: ${isLiveForce ? 'var(--blue)' : 'var(--neon)'}">
                                 <span class="league">🏆 ${m.competition.name}</span>
                                 <span class="teams">${teamsText} ${tempoTexto ? `<span class="time-badge">${tempoTexto}</span>` : ''}</span>
-                                <span style="color:var(--blue); font-size:0.85rem;">${isLive ? '● AO VIVO' : 'Aguardando Início'}</span>
+                                <span style="color:var(--blue); font-size:0.85rem;">${isLiveForce ? '● AO VIVO' : 'Aguardando Início'}</span>
                             </div>`;
                     });
                     html += `<div class="group-footer" style="color:var(--neon); font-size:0.8rem; text-align:center">JOGOS MAIS DE 1.5 GOLS</div></div>`;
                     finalHtml += html;
                 }
             } else {
-                // ... lógica da aba resultados (mantida original)
                 if (bilheteFinalizado) {
                     let winB = true;
                     let html = `<div class="group-container"><div class="group-header">FINALIZADO HOJE</div>`;
