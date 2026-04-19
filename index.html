@@ -4,125 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scanner Elite Hunter</title>
-    <style>
-        :root { --neon: #00ff88; --blue: #00d9ff; --bg: #0a0c10; --card: #161b22; --red: #ff4444; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; text-align: center; }
-        
-        .header { position: sticky; top: 0; background: var(--bg); padding: 15px; border-bottom: 2px solid var(--neon); z-index: 100; }
-        .nav { display: flex; gap: 8px; max-width: 450px; margin: 0 auto; }
-        .nav-btn { flex: 1; padding: 12px; background: #222; border: none; color: #888; font-weight: bold; border-radius: 8px; cursor: pointer; }
-        .nav-btn.active { background: var(--neon); color: #000; box-shadow: 0 0 15px var(--neon); }
-
-        .stats-bar { display: flex; justify-content: space-around; background: #1f2937; padding: 10px; margin: 10px auto; max-width: 400px; border-radius: 10px; border: 1px solid #333; }
-        .stat-val { font-size: 1.4rem; font-weight: 900; }
-        .stat-label { font-size: 0.7rem; color: #aaa; text-transform: uppercase; }
-
-        .container { max-width: 450px; margin: 0 auto; padding: 10px; }
-        .card { background: var(--card); border-left: 5px solid var(--neon); margin-bottom: 12px; padding: 15px; border-radius: 8px; text-align: left; }
-        
-        .league { color: var(--neon); font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block; }
-        .teams { font-size: 1.15rem; font-weight: 900; display: block; margin-bottom: 8px; color: #fff; }
-        .date-time { color: var(--blue); font-size: 0.9rem; font-weight: bold; display: block; }
-        
-        .res-badge { display: block; margin-top: 15px; padding: 8px; border-radius: 5px; font-weight: 900; text-align: center; font-size: 1rem; text-transform: uppercase; }
-        .green-bg { background: var(--neon); color: #000; }
-        .red-bg { background: var(--red); color: #fff; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="header">
     <div class="nav">
         <button id="btn-gols" class="nav-btn active" onclick="setTab('gols')">JOGOS 1.5</button>
-        <button id="btn-res" class="nav-btn" onclick="setTab('res')">RESULTADOS</button>
+        <button id="btn-res" class="nav-btn" onclick="setTab('res')">RESULTADOS (3D)</button>
     </div>
 </div>
 
 <div id="stats-header" class="stats-bar" style="display: none;">
-    <div style="text-align:center"><span id="total-green" class="stat-val" style="color:var(--neon)">0</span><br><span class="stat-label">Greens</span></div>
-    <div style="text-align:center"><span id="total-red" class="stat-val" style="color:var(--red)">0</span><br><span class="stat-label">Reds</span></div>
+    <div style="text-align:center">
+        <span id="total-green" class="stat-val" style="color:var(--neon)">0</span><br>
+        <span class="stat-label">Greens</span>
+    </div>
+    <div style="text-align:center">
+        <span id="total-red" class="stat-val" style="color:var(--red)">0</span><br>
+        <span class="stat-label">Reds</span>
+    </div>
 </div>
 
 <div id="display" class="container">
-    <div style="padding:40px; opacity:0.5">Buscando Jogos...</div>
+    <div style="padding:40px; opacity:0.5">Buscando dados dos últimos 3 dias...</div>
 </div>
 
-<script>
-    const API_KEY = '9aad45346ed6479c9255ee70aab28f05';
-    const PROXY = 'https://corsproxy.io/?'; 
-    
-    let matches = [];
-    let currentTab = 'gols';
-
-    function setTab(t) {
-        currentTab = t;
-        document.getElementById('btn-gols').className = t === 'gols' ? 'nav-btn active' : 'nav-btn';
-        document.getElementById('btn-res').className = t === 'res' ? 'nav-btn active' : 'nav-btn';
-        document.getElementById('stats-header').style.display = (t === 'res') ? 'flex' : 'none';
-        render();
-    }
-
-    async function load() {
-        const today = new Date().toISOString().split('T')[0];
-        const future = new Date(); future.setDate(future.getDate() + 2);
-        const url = `https://api.football-data.org/v4/matches?dateFrom=${today}&dateTo=${future.toISOString().split('T')[0]}`;
-        
-        try {
-            const r = await fetch(PROXY + encodeURIComponent(url), { headers: { 'X-Auth-Token': API_KEY } });
-            const d = await r.json();
-            matches = d.matches || [];
-            render();
-        } catch (e) {
-            document.getElementById('display').innerHTML = '<div style="color:red;padding:20px">Erro de conexão.</div>';
-        }
-    }
-
-    function render() {
-        const box = document.getElementById('display');
-        box.innerHTML = ''; 
-        let gCount = 0, rCount = 0;
-
-        matches.forEach(m => {
-            const league = m.competition.name;
-            const h = m.homeTeam.name;
-            const a = m.awayTeam.name;
-            const date = new Date(m.utcDate).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-            const time = new Date(m.utcDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            if (m.id % 10 >= 4) {
-                if (currentTab === 'gols' && m.status !== 'FINISHED') {
-                    box.innerHTML += `
-                        <div class="card">
-                            <span class="league">🏆 ${league}</span>
-                            <span class="teams">${h} x ${a}</span>
-                            <span class="date-time">📅 ${date} - ⏰ ${time}</span>
-                        </div>`;
-                } else if (currentTab === 'res' && m.status === 'FINISHED') {
-                    const scH = m.score.fullTime.home, scA = m.score.fullTime.away;
-                    const isGreen = (scH + scA >= 2);
-                    isGreen ? gCount++ : rCount++;
-                    
-                    box.innerHTML += `
-                        <div class="card" style="border-left-color: ${isGreen ? 'var(--neon)' : 'var(--red)'}">
-                            <span class="league">🏆 ${league}</span>
-                            <span class="teams">${h} ${scH} - ${scA} ${a}</span>
-                            <span class="date-time">📅 ${date} - ⏰ ${time}</span>
-                            <div class="res-badge ${isGreen ? 'green-bg' : 'red-bg'}">
-                                ${isGreen ? 'GREEN ✅' : 'RED ❌'}
-                            </div>
-                        </div>`;
-                }
-            }
-        });
-
-        document.getElementById('total-green').innerText = gCount;
-        document.getElementById('total-red').innerText = rCount;
-        
-        if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Sem jogos no momento.</div>';
-    }
-
-    load();
-    setInterval(load, 60000);
-</script>
+<script src="script.js"></script>
 </body>
 </html>
