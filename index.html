@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Elite Hunter</title>
+    <title>Scanner Elite Hunter - Odd 1.85</title>
     <style>
         :root { --neon: #00ff88; --blue: #00d9ff; --bg: #0a0c10; --card: #161b22; --red: #ff4444; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; text-align: center; }
@@ -13,20 +13,21 @@
         .nav-btn { flex: 1; padding: 12px; background: #222; border: none; color: #888; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
         .nav-btn.active { background: var(--neon); color: #000; box-shadow: 0 0 15px var(--neon); }
 
-        .stats-bar { display: flex; justify-content: space-around; background: #1f2937; padding: 10px; margin: 10px auto; max-width: 400px; border-radius: 10px; border: 1px solid #333; }
+        .stats-bar { display: none; flex-direction: column; align-items: center; background: #1f2937; padding: 15px; margin: 10px auto; max-width: 400px; border-radius: 10px; border: 1px solid #333; }
+        .stats-row { display: flex; justify-content: space-around; width: 100%; margin-bottom: 10px; }
         .stat-val { font-size: 1.4rem; font-weight: 900; }
         .stat-label { font-size: 0.7rem; color: #aaa; text-transform: uppercase; }
+        .profit-box { border-top: 1px solid #444; width: 100%; padding-top: 10px; }
 
         .container { max-width: 450px; margin: 0 auto; padding: 10px; }
         .card { background: var(--card); border-left: 5px solid var(--neon); margin-bottom: 12px; padding: 15px; border-radius: 8px; text-align: left; }
         
+        .group-container { border: 2px solid #333; margin-bottom: 25px; border-radius: 12px; overflow: hidden; background: #0d1117; }
+        .group-header { background: #1f2937; padding: 8px; font-size: 0.75rem; color: var(--blue); text-align: center; border-bottom: 1px solid #333; font-weight: bold; }
+        .group-footer { padding: 12px; font-weight: 900; font-size: 1.1rem; background: #161b22; }
+
         .league { color: var(--neon); font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block; }
         .teams { font-size: 1.15rem; font-weight: 900; display: block; margin-bottom: 8px; color: #fff; }
-        .date-time { color: var(--blue); font-size: 0.9rem; font-weight: bold; display: block; }
-        
-        .res-badge { display: block; margin-top: 15px; padding: 8px; border-radius: 5px; font-weight: 900; text-align: center; font-size: 1rem; text-transform: uppercase; }
-        .green-bg { background: var(--neon); color: #000; }
-        .red-bg { background: var(--red); color: #fff; }
     </style>
 </head>
 <body>
@@ -38,13 +39,19 @@
     </div>
 </div>
 
-<div id="stats-header" class="stats-bar" style="display: none;">
-    <div style="text-align:center"><span id="total-green" class="stat-val" style="color:var(--neon)">0</span><br><span class="stat-label">Greens</span></div>
-    <div style="text-align:center"><span id="total-red" class="stat-val" style="color:var(--red)">0</span><br><span class="stat-label">Reds</span></div>
+<div id="stats-header" class="stats-bar">
+    <div class="stats-row">
+        <div style="text-align:center"><span id="total-green" class="stat-val" style="color:var(--neon)">0</span><br><span class="stat-label">Bilhetes ✅</span></div>
+        <div style="text-align:center"><span id="total-red" class="stat-val" style="color:var(--red)">0</span><br><span class="stat-label">Bilhetes ❌</span></div>
+    </div>
+    <div class="profit-box">
+        <span id="total-profit" class="stat-val">R$ 0,00</span><br>
+        <span class="stat-label">Lucro Líquido (Odd 1.85)</span>
+    </div>
 </div>
 
 <div id="display" class="container">
-    <div style="padding:40px; opacity:0.5">Buscando Jogos...</div>
+    <div style="padding:40px; opacity:0.5">Buscando Jogos de Hoje...</div>
 </div>
 
 <script>
@@ -63,80 +70,100 @@
     }
 
     async function load() {
-        const past = new Date(); past.setDate(past.getDate() - 1); // Reduzi para 1 dia para otimizar a carga
-        const future = new Date(); future.setDate(future.getDate() + 2);
-        
-        const dateFrom = past.toISOString().split('T')[0];
-        const dateTo = future.toISOString().split('T')[0];
-        
-        const url = `https://api.football-data.org/v4/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+        const d = new Date();
+        const hoje = d.toISOString().split('T')[0];
+        // Busca um dia antes e depois para garantir que o fuso horário não esconda nada de "hoje"
+        d.setDate(d.getDate() - 1);
+        const ontem = d.toISOString().split('T')[0];
+        d.setDate(d.getDate() + 2);
+        const amanha = d.toISOString().split('T')[0];
+
+        const url = `https://api.football-data.org/v4/matches?dateFrom=${ontem}&dateTo=${amanha}`;
         
         try {
             const r = await fetch(PROXY + encodeURIComponent(url), { headers: { 'X-Auth-Token': API_KEY } });
-            const d = await r.json();
-            
-            // Ordenação Cronológica (Do mais cedo para o mais tarde)
-            matches = (d.matches || []).sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
-            
+            const data = await r.json();
+            // ORDENA TUDO POR HORÁRIO
+            matches = (data.matches || []).sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
             render();
         } catch (e) {
-            document.getElementById('display').innerHTML = '<div style="color:red;padding:20px">Erro de conexão com a API.</div>';
+            document.getElementById('display').innerHTML = 'Erro ao conectar. Verifique a internet.';
         }
     }
 
     function render() {
         const box = document.getElementById('display');
         box.innerHTML = ''; 
-        let gCount = 0, rCount = 0;
+        let greenB = 0, redB = 0, profit = 0;
+        const STAKE = 100, ODD = 1.85;
+        const agora = new Date();
+        const hojeLocal = agora.toLocaleDateString('pt-BR');
 
-        // Se for aba de resultados, mostramos os últimos finalizados no topo (inverso)
-        let listToRender = currentTab === 'res' ? [...matches].reverse() : matches;
-
-        listToRender.forEach(m => {
-            const league = m.competition ? m.competition.name : "Liga";
-            const h = m.homeTeam.name;
-            const a = m.awayTeam.name;
-            const dateObj = new Date(m.utcDate);
-            const date = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-            const time = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            // Filtro de segurança para IDs (seu critério original)
-            if (m.id % 10 >= 4) {
-                if (currentTab === 'gols' && m.status !== 'FINISHED') {
-                    box.innerHTML += `
-                        <div class="card">
-                            <span class="league">🏆 ${league}</span>
-                            <span class="teams">${h} x ${a}</span>
-                            <span class="date-time">📅 ${date} - ⏰ ${time}</span>
-                        </div>`;
-                } else if (currentTab === 'res' && m.status === 'FINISHED') {
-                    const scH = m.score.fullTime.home ?? 0;
-                    const scA = m.score.fullTime.away ?? 0;
-                    const isGreen = (scH + scA >= 2);
-                    
-                    if(isGreen) gCount++; else rCount++;
-                    
-                    box.innerHTML += `
-                        <div class="card" style="border-left-color: ${isGreen ? 'var(--neon)' : 'var(--red)'}">
-                            <span class="league">🏆 ${league}</span>
-                            <span class="teams">${h} ${scH} - ${scA} ${a}</span>
-                            <span class="date-time">📅 ${date} - ⏰ ${time}</span>
-                            <div class="res-badge ${isGreen ? 'green-bg' : 'red-bg'}">
-                                ${isGreen ? 'GREEN ✅' : 'RED ❌'}
-                            </div>
-                        </div>`;
-                }
-            }
+        // 1. Filtra apenas jogos que são do seu robô (ID) e que acontecem HOJE
+        let validMatches = matches.filter(m => {
+            const dataJogo = new Date(m.utcDate).toLocaleDateString('pt-BR');
+            return m.id % 10 >= 4 && dataJogo === hojeLocal;
         });
 
-        document.getElementById('total-green').innerText = gCount;
-        document.getElementById('total-red').innerText = rCount;
+        // 2. Monta os lotes de 3 em 3 da fila de hoje
+        for (let i = 0; i < validMatches.length; i += 3) {
+            let group = validMatches.slice(i, i + 3);
+            if (group.length < 3) continue;
+
+            let bilheteFinalizado = group.every(m => m.status === 'FINISHED' || m.status === 'POSTPONED');
+
+            if (currentTab === 'gols') {
+                // MOSTRA SE: Não terminou (está em pré-jogo ou ao vivo)
+                if (!bilheteFinalizado) {
+                    let html = `<div class="group-container"><div class="group-header">LOTE HORÁRIO: ${new Date(group[0].utcDate).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>`;
+                    group.forEach(m => {
+                        let status = (m.status === 'IN_PLAY' || m.status === 'LIVE' || m.status === 'PAUSED') ? 'AO VIVO' : 'PRÉ-JOGO';
+                        let scH = m.score.fullTime.home ?? 0;
+                        let scA = m.score.fullTime.away ?? 0;
+                        let teamsText = status === 'AO VIVO' ? `${m.homeTeam.name} ${scH} - ${scA} ${m.awayTeam.name}` : `${m.homeTeam.name} x ${m.awayTeam.name}`;
+                        
+                        html += `
+                            <div class="card" style="margin-bottom:0; border-radius:0; border-bottom:1px solid #222; border-left-color: ${status === 'AO VIVO' ? 'var(--blue)' : 'var(--neon)'}">
+                                <span class="league">🏆 ${m.competition.name}</span>
+                                <span class="teams">${teamsText}</span>
+                                <span style="color:var(--blue); font-size:0.85rem;">⏰ ${new Date(m.utcDate).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} ${status === 'AO VIVO' ? ' ● ' + status : ''}</span>
+                            </div>`;
+                    });
+                    html += `<div class="group-footer" style="color:var(--neon); font-size:0.8rem; text-align:center">FILA ATIVA DE HOJE</div></div>`;
+                    box.innerHTML += html;
+                }
+            } else {
+                // RESULTADOS: Apenas o que já fechou os 3 jogos
+                if (bilheteFinalizado) {
+                    let winB = true;
+                    let html = `<div class="group-container"><div class="group-header">FINALIZADO HOJE</div>`;
+                    group.forEach(m => {
+                        const gols = (m.score.fullTime.home ?? 0) + (m.score.fullTime.away ?? 0);
+                        if (gols < 2) winB = false;
+                        html += `
+                            <div class="card" style="margin-bottom:0; border-radius:0; border-left-color: ${gols >= 2 ? 'var(--neon)' : 'var(--red)'}">
+                                <span class="league">🏆 ${m.competition.name}</span>
+                                <span class="teams">${m.homeTeam.name} ${m.score.fullTime.home}-${m.score.fullTime.away} ${m.awayTeam.name}</span>
+                            </div>`;
+                    });
+                    if(winB) { greenB++; profit += (STAKE * ODD) - STAKE; } else { redB++; profit -= STAKE; }
+                    html += `<div class="group-footer" style="color:${winB ? 'var(--neon)' : 'var(--red)'}; text-align:center">${winB ? 'GREEN ✅ + R$ 85' : 'RED ❌ - R$ 100'}</div></div>`;
+                    box.innerHTML = html + box.innerHTML;
+                }
+            }
+        }
+
+        document.getElementById('total-green').innerText = greenB;
+        document.getElementById('total-red').innerText = redB;
+        const pEl = document.getElementById('total-profit');
+        pEl.innerText = `R$ ${profit.toFixed(2)}`;
+        pEl.style.color = profit >= 0 ? 'var(--neon)' : 'var(--red)';
         
-        if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Sem dados para exibir.</div>';
+        if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Nenhum lote de 3 jogos encontrado para hoje.</div>';
     }
 
     load();
-    setInterval(load, 60000); // Atualiza a cada 1 minuto
+    setInterval(load, 60000);
 </script>
 </body>
 </html>
