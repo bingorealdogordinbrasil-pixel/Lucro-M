@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Elite - 48h</title>
+    <title>Scanner Elite - Aposta do Dia</title>
     <style>
         :root { --neon: #00ff88; --bg: #0a0c10; --card: #161b22; --red: #ff4444; --blue: #00d9ff; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; }
@@ -28,13 +28,13 @@
 
 <div class="header">
     <div class="nav">
-        <button id="btn-gols" class="nav-btn active" onclick="setTab('gols')">HOJE E AMANHÃ</button>
+        <button id="btn-gols" class="nav-btn active" onclick="setTab('gols')">APOSTA DO DIA</button>
         <button id="btn-res" class="nav-btn" onclick="setTab('res')">RESULTADOS</button>
     </div>
 </div>
 
 <div id="display" class="container">
-    <div style="padding:50px; text-align:center; opacity:0.5;">Sincronizando jogos (48h)...</div>
+    <div style="padding:50px; text-align:center; opacity:0.5;">Sincronizando apostas...</div>
 </div>
 
 <script>
@@ -59,7 +59,6 @@
         dAmanha.setDate(d.getDate() + 1);
         const amanha = dAmanha.toISOString().split('T')[0];
 
-        // Busca o intervalo de 2 dias: HOJE e AMANHÃ
         const url = `https://api.football-data.org/v4/matches?dateFrom=${hoje}&dateTo=${amanha}`;
         
         try {
@@ -69,12 +68,11 @@
             const data = await response.json();
             
             if (data.matches) {
-                // Ordena por horário e data
                 matches = data.matches.sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
                 render();
             }
         } catch (e) {
-            document.getElementById('display').innerHTML = '<div style="text-align:center;padding:50px;color:red">Erro de conexão.</div>';
+            console.error("Erro ao carregar dados.");
         }
     }
 
@@ -90,8 +88,7 @@
             let finalizado = group.every(m => m.status === 'FINISHED' || (agora - new Date(m.utcDate)) / 60000 > 130);
 
             if (currentTab === 'gols' && !finalizado) {
-                const dataRef = new Date(group[0].utcDate).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-                html += `<div class="group-container"><div class="group-header">BILHETE - INÍCIO ${dataRef}</div>`;
+                html += `<div class="group-container"><div class="group-header">APOSTA DO DIA</div>`;
                 
                 group.forEach(m => {
                     const dataObj = new Date(m.utcDate);
@@ -127,7 +124,7 @@
             }
         }
 
-        box.innerHTML = html || '<div style="text-align:center;padding:50px;opacity:0.3">Buscando bilhetes...</div>';
+        box.innerHTML = html || '<div style="text-align:center;padding:50px;opacity:0.3">Aguardando bilhetes...</div>';
     }
 
     loadData();
