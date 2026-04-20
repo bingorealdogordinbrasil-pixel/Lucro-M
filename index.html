@@ -7,11 +7,18 @@
     <style>
         :root { --neon: #00ff88; --bg: #0a0c10; --card: #161b22; --red: #ff4444; --blue: #00d9ff; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; }
-        .header { position: sticky; top: 0; background: var(--bg); padding: 15px; border-bottom: 2px solid var(--neon); text-align: center; z-index: 100; }
-        .nav { display: flex; gap: 8px; max-width: 450px; margin: 0 auto; }
-        .nav-btn { flex: 1; padding: 12px; background: #222; border: none; color: #888; font-weight: bold; border-radius: 8px; cursor: pointer; }
-        .nav-btn.active { background: var(--neon); color: #000; }
         
+        .header { position: sticky; top: 0; background: var(--bg); padding: 15px; border-bottom: 1px solid #333; text-align: center; z-index: 100; }
+        .nav { display: flex; gap: 8px; max-width: 450px; margin: 0 auto; }
+        .nav-btn { flex: 1; padding: 12px; background: #222; border: none; color: #888; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .nav-btn.active { background: var(--neon); color: #000; }
+
+        /* Barra de Placar - Escondida por padrão */
+        .stats-bar { display: none; justify-content: space-around; max-width: 450px; margin: 15px auto 0 auto; padding: 10px; background: #1a1f26; border-radius: 8px; border: 1px solid #333; }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 1.4rem; font-weight: 900; display: block; }
+        .stat-label { font-size: 0.65rem; text-transform: uppercase; color: #888; letter-spacing: 1px; }
+
         .container { max-width: 450px; margin: 0 auto; padding: 10px; }
         .group-container { border: 2px solid #333; margin-bottom: 25px; border-radius: 12px; overflow: hidden; background: #0d1117; }
         .group-header { background: #1f2937; padding: 10px; font-size: 0.85rem; color: var(--blue); text-align: center; border-bottom: 1px solid #333; font-weight: bold; }
@@ -31,10 +38,21 @@
         <button id="btn-gols" class="nav-btn active" onclick="setTab('gols')">APOSTA DO DIA</button>
         <button id="btn-res" class="nav-btn" onclick="setTab('res')">RESULTADOS</button>
     </div>
+    
+    <div id="stats-area" class="stats-bar">
+        <div class="stat-item">
+            <span id="count-green" class="stat-value" style="color: var(--neon)">0</span>
+            <span class="stat-label">Greens ✅</span>
+        </div>
+        <div class="stat-item" style="border-left: 1px solid #333; padding-left: 40px;">
+            <span id="count-red" class="stat-value" style="color: var(--red)">0</span>
+            <span class="stat-label">Reds ❌</span>
+        </div>
+    </div>
 </div>
 
 <div id="display" class="container">
-    <div style="padding:50px; text-align:center; opacity:0.5;">Sincronizando apostas...</div>
+    <div style="padding:50px; text-align:center; opacity:0.5;">Carregando...</div>
 </div>
 
 <script>
@@ -46,85 +64,101 @@
     function setTab(t) {
         currentTab = t;
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        if(t === 'gols') document.getElementById('btn-gols').classList.add('active');
-        else document.getElementById('btn-res').classList.add('active');
+        
+        const statsArea = document.getElementById('stats-area');
+        
+        if(t === 'gols') {
+            document.getElementById('btn-gols').classList.add('active');
+            statsArea.style.display = 'none'; // Esconde na aba de apostas
+        } else {
+            document.getElementById('btn-res').classList.add('active');
+            statsArea.style.display = 'flex'; // Mostra na aba de resultados
+        }
         render();
     }
 
     async function loadData() {
         const d = new Date();
-        const hoje = d.toISOString().split('T')[0];
-        
-        const dAmanha = new Date();
-        dAmanha.setDate(d.getDate() + 1);
+        const dOntem = new Date(); dOntem.setDate(d.getDate() - 1);
+        const ontem = dOntem.toISOString().split('T')[0];
+        const dAmanha = new Date(); dAmanha.setDate(d.getDate() + 1);
         const amanha = dAmanha.toISOString().split('T')[0];
 
-        const url = `https://api.football-data.org/v4/matches?dateFrom=${hoje}&dateTo=${amanha}`;
+        const url = `https://api.football-data.org/v4/matches?dateFrom=${ontem}&dateTo=${amanha}`;
         
         try {
             const response = await fetch(PROXY + encodeURIComponent(url), {
                 headers: { 'X-Auth-Token': API_KEY }
             });
             const data = await response.json();
-            
             if (data.matches) {
                 matches = data.matches.sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
                 render();
             }
-        } catch (e) {
-            console.error("Erro ao carregar dados.");
-        }
+        } catch (e) { console.error("Erro."); }
     }
 
     function render() {
         const box = document.getElementById('display');
         let html = '';
+        let totalGreen = 0;
+        let totalRed = 0;
         const agora = new Date();
+        const hojeStr = agora.toLocaleDateString('pt-BR');
 
         for (let i = 0; i < matches.length; i += 3) {
             let group = matches.slice(i, i + 3);
             if (group.length < 3) continue;
 
-            let finalizado = group.every(m => m.status === 'FINISHED' || (agora - new Date(m.utcDate)) / 60000 > 130);
+            let finalizado = group.every(m => m.status === 'FINISHED' || (agora - new Date(m.utcDate)) / 60000 > 135);
+
+            if (finalizado) {
+                let isWin = true;
+                group.forEach(m => {
+                    if (((m.score.fullTime.home ?? 0) + (m.score.fullTime.away ?? 0)) < 2) isWin = false;
+                });
+                isWin ? totalGreen++ : totalRed++;
+            }
 
             if (currentTab === 'gols' && !finalizado) {
+                const dStart = new Date(group[0].utcDate);
+                if (dStart < new Date().setHours(0,0,0,0)) continue;
+
                 html += `<div class="group-container"><div class="group-header">APOSTA DO DIA</div>`;
-                
                 group.forEach(m => {
-                    const dataObj = new Date(m.utcDate);
-                    const dia = dataObj.getDate() === agora.getDate() ? "Hoje" : "Amanhã";
-                    const hora = dataObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    
+                    const mDate = new Date(m.utcDate);
+                    const dia = mDate.toLocaleDateString('pt-BR') === hojeStr ? "Hoje" : (mDate > agora ? "Amanhã" : "Ontem");
                     html += `
                         <div class="card">
                             <span class="league">🏆 ${m.competition.name}</span>
                             <span class="teams">${m.homeTeam.name} vs ${m.awayTeam.name}</span>
-                            <span class="schedule">${dia} - ${hora}</span>
+                            <span class="schedule">${dia} - ${mDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                         </div>`;
                 });
                 html += `</div>`;
             } else if (currentTab === 'res' && finalizado) {
-                let green = true;
-                let resHtml = `<div class="group-container"><div class="group-header">RESULTADOS</div>`;
-                
+                let isWin = true;
+                const dataRef = new Date(group[0].utcDate).toLocaleDateString('pt-BR');
+                let resHtml = `<div class="group-container"><div class="group-header">RESULTADOS - ${dataRef}</div>`;
                 group.forEach(m => {
                     let gols = (m.score.fullTime.home ?? 0) + (m.score.fullTime.away ?? 0);
-                    if (gols < 2) green = false;
+                    if (gols < 2) isWin = false;
                     resHtml += `
                         <div class="card" style="border-left: 4px solid ${gols >= 2 ? 'var(--neon)' : 'var(--red)'}">
                             <span class="league">${m.competition.name}</span>
                             <span class="teams">${m.homeTeam.name} ${m.score.fullTime.home}-${m.score.fullTime.away} ${m.awayTeam.name}</span>
                         </div>`;
                 });
-
-                resHtml += `<div class="group-footer" style="color:${green ? 'var(--neon)' : 'var(--red)'}">
-                    ${green ? 'GREEN ✅' : 'RED ❌'}
+                resHtml += `<div class="group-footer" style="color:${isWin ? 'var(--neon)' : 'var(--red)'}">
+                    ${isWin ? 'GREEN ✅' : 'RED ❌'}
                 </div></div>`;
                 html = resHtml + html;
             }
         }
 
-        box.innerHTML = html || '<div style="text-align:center;padding:50px;opacity:0.3">Aguardando bilhetes...</div>';
+        document.getElementById('count-green').innerText = totalGreen;
+        document.getElementById('count-red').innerText = totalRed;
+        box.innerHTML = html || '<div style="text-align:center;padding:50px;opacity:0.3">Aguardando dados...</div>';
     }
 
     loadData();
