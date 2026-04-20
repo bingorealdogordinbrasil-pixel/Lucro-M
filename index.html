@@ -3,31 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Elite - Aposta do Dia</title>
+    <title>Scanner Elite - Analista V3</title>
     <style>
-        :root { --neon: #00ff88; --bg: #0a0c10; --card: #161b22; --red: #ff4444; --blue: #00d9ff; }
+        :root { --neon: #00ff88; --bg: #0a0c10; --card: #161b22; --red: #ff4444; --blue: #00d9ff; --gold: #ffcc00; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; }
-        
         .header { position: sticky; top: 0; background: var(--bg); padding: 15px; border-bottom: 1px solid #333; text-align: center; z-index: 100; }
         .nav { display: flex; gap: 8px; max-width: 450px; margin: 0 auto; }
-        .nav-btn { flex: 1; padding: 12px; background: #222; border: none; color: #888; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .nav-btn { flex: 1; padding: 12px; background: #222; border: none; color: #888; font-weight: bold; border-radius: 8px; cursor: pointer; }
         .nav-btn.active { background: var(--neon); color: #000; }
-
-        /* Barra de Placar - Escondida por padrão */
         .stats-bar { display: none; justify-content: space-around; max-width: 450px; margin: 15px auto 0 auto; padding: 10px; background: #1a1f26; border-radius: 8px; border: 1px solid #333; }
-        .stat-item { text-align: center; }
-        .stat-value { font-size: 1.4rem; font-weight: 900; display: block; }
-        .stat-label { font-size: 0.65rem; text-transform: uppercase; color: #888; letter-spacing: 1px; }
-
         .container { max-width: 450px; margin: 0 auto; padding: 10px; }
         .group-container { border: 2px solid #333; margin-bottom: 25px; border-radius: 12px; overflow: hidden; background: #0d1117; }
         .group-header { background: #1f2937; padding: 10px; font-size: 0.85rem; color: var(--blue); text-align: center; border-bottom: 1px solid #333; font-weight: bold; }
-        
-        .card { background: var(--card); padding: 15px; border-bottom: 1px solid #222; text-align: center; }
-        .league { color: var(--neon); font-size: 0.7rem; font-weight: 900; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        .card { background: var(--card); padding: 15px; border-bottom: 1px solid #222; text-align: center; position: relative; }
         .teams { font-size: 1.1rem; font-weight: 900; display: block; margin: 5px 0; }
-        .schedule { font-size: 0.8rem; color: #aaa; font-weight: bold; }
-        
+        .odd-badge { position: absolute; top: 10px; right: 10px; background: rgba(0, 255, 136, 0.1); border: 1px solid var(--neon); color: var(--neon); padding: 4px 8px; border-radius: 6px; font-weight: 900; font-size: 0.85rem; }
+        .schedule { font-size: 0.8rem; color: #aaa; }
         .group-footer { padding: 12px; font-weight: 900; text-align: center; background: #161b22; font-size: 1.1rem; }
     </style>
 </head>
@@ -35,134 +26,121 @@
 
 <div class="header">
     <div class="nav">
-        <button id="btn-gols" class="nav-btn active" onclick="setTab('gols')">APOSTA DO DIA</button>
+        <button id="btn-gols" class="nav-btn active" onclick="setTab('gols')">ANÁLISE DO DIA</button>
         <button id="btn-res" class="nav-btn" onclick="setTab('res')">RESULTADOS</button>
     </div>
-    
     <div id="stats-area" class="stats-bar">
-        <div class="stat-item">
-            <span id="count-green" class="stat-value" style="color: var(--neon)">0</span>
-            <span class="stat-label">Greens ✅</span>
-        </div>
-        <div class="stat-item" style="border-left: 1px solid #333; padding-left: 40px;">
-            <span id="count-red" class="stat-value" style="color: var(--red)">0</span>
-            <span class="stat-label">Reds ❌</span>
-        </div>
+        <div class="stat-item"><span id="count-green" style="font-size:1.4rem; font-weight:900; color:var(--neon)">0</span><br><small>GREENS</small></div>
+        <div class="stat-item" style="border-left:1px solid #333; padding-left:40px;"><span id="count-red" style="font-size:1.4rem; font-weight:900; color:var(--red)">0</span><br><small>REDS</small></div>
     </div>
 </div>
 
 <div id="display" class="container">
-    <div style="padding:50px; text-align:center; opacity:0.5;">Carregando...</div>
+    <div style="padding:50px; text-align:center; opacity:0.5;">Executando análise de probabilidade...</div>
 </div>
 
 <script>
-    const API_KEY = '9aad45346ed6479c9255ee70aab28f05';
+    const API_KEY_FB = '9aad45346ed6479c9255ee70aab28f05';
+    const API_KEY_OD = 'C05a9171bd8759b0031e1f61bc592f2f'; 
     const PROXY = 'https://corsproxy.io/?'; 
+    
     let matches = [];
+    let realOdds = {};
     let currentTab = 'gols';
 
     function setTab(t) {
         currentTab = t;
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        
-        const statsArea = document.getElementById('stats-area');
-        
-        if(t === 'gols') {
-            document.getElementById('btn-gols').classList.add('active');
-            statsArea.style.display = 'none'; // Esconde na aba de apostas
-        } else {
-            document.getElementById('btn-res').classList.add('active');
-            statsArea.style.display = 'flex'; // Mostra na aba de resultados
-        }
+        document.getElementById('stats-area').style.display = (t === 'res') ? 'flex' : 'none';
+        t === 'gols' ? document.getElementById('btn-gols').classList.add('active') : document.getElementById('btn-res').classList.add('active');
         render();
     }
 
-    async function loadData() {
-        const d = new Date();
-        const dOntem = new Date(); dOntem.setDate(d.getDate() - 1);
-        const ontem = dOntem.toISOString().split('T')[0];
-        const dAmanha = new Date(); dAmanha.setDate(d.getDate() + 1);
-        const amanha = dAmanha.toISOString().split('T')[0];
+    async function fetchAnalysis() {
+        try {
+            const url = `https://api.the-odds-api.com/v4/sports/soccer/odds/?apiKey=${API_KEY_OD}&regions=eu&markets=totals&bookmakers=bet365`;
+            const resp = await fetch(PROXY + encodeURIComponent(url));
+            const data = await resp.json();
+            data.forEach(g => {
+                const bk = g.bookmakers.find(b => b.key === 'bet365');
+                if(bk) {
+                    const mkt = bk.markets.find(m => m.key === 'totals');
+                    const o15 = mkt?.outcomes.find(o => o.name === 'Over' && o.point === 1.5);
+                    // SÓ ADICIONA SE A ODD FOR ENTRE 1.20 E 1.45 (Cenário ideal de gols)
+                    if(o15 && o15.price >= 1.20 && o15.price <= 1.45) {
+                        realOdds[g.home_team] = o15.price;
+                    }
+                }
+            });
+        } catch(e) { console.error("Análise Offline"); }
+    }
 
-        const url = `https://api.football-data.org/v4/matches?dateFrom=${ontem}&dateTo=${amanha}`;
+    async function loadData() {
+        await fetchAnalysis();
+        const d = new Date();
+        const dAnte = new Date(); dAnte.setDate(d.getDate() - 2);
+        const anteontem = dAnte.toISOString().split('T')[0];
+        const dAm = new Date(); dAm.setDate(d.getDate() + 1);
+        const amanha = dAm.toISOString().split('T')[0];
+
+        const url = `https://api.football-data.org/v4/matches?dateFrom=${anteontem}&dateTo=${amanha}`;
         
         try {
-            const response = await fetch(PROXY + encodeURIComponent(url), {
-                headers: { 'X-Auth-Token': API_KEY }
-            });
-            const data = await response.json();
+            const resp = await fetch(PROXY + encodeURIComponent(url), { headers: { 'X-Auth-Token': API_KEY_FB } });
+            const data = await resp.json();
             if (data.matches) {
                 matches = data.matches.sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
                 render();
             }
-        } catch (e) { console.error("Erro."); }
+        } catch (e) { console.error("Data Error"); }
     }
 
     function render() {
         const box = document.getElementById('display');
         let html = '';
-        let totalGreen = 0;
-        let totalRed = 0;
+        let tG = 0, tR = 0;
         const agora = new Date();
-        const hojeStr = agora.toLocaleDateString('pt-BR');
 
-        for (let i = 0; i < matches.length; i += 3) {
-            let group = matches.slice(i, i + 3);
+        // FILTRO DE ANÁLISE: Só passa jogo que tem odd confirmada no nosso intervalo
+        let analyzedMatches = matches.filter(m => {
+            const finalizado = m.status === 'FINISHED' || (agora - new Date(m.utcDate)) / 60000 > 135;
+            if (currentTab === 'gols') {
+                return !finalizado && realOdds[m.homeTeam.name] && new Date(m.utcDate) >= new Date().setHours(0,0,0,0);
+            }
+            return finalizado;
+        });
+
+        for (let i = 0; i < analyzedMatches.length; i += 3) {
+            let group = analyzedMatches.slice(i, i + 3);
             if (group.length < 3) continue;
 
-            let finalizado = group.every(m => m.status === 'FINISHED' || (agora - new Date(m.utcDate)) / 60000 > 135);
-
-            if (finalizado) {
-                let isWin = true;
+            if (currentTab === 'gols') {
+                const h = new Date(group[0].utcDate).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                html += `<div class="group-container"><div class="group-header">BILHETE ANALISADO - INÍCIO ${h}</div>`;
                 group.forEach(m => {
-                    if (((m.score.fullTime.home ?? 0) + (m.score.fullTime.away ?? 0)) < 2) isWin = false;
-                });
-                isWin ? totalGreen++ : totalRed++;
-            }
-
-            if (currentTab === 'gols' && !finalizado) {
-                const dStart = new Date(group[0].utcDate);
-                if (dStart < new Date().setHours(0,0,0,0)) continue;
-
-                html += `<div class="group-container"><div class="group-header">APOSTA DO DIA</div>`;
-                group.forEach(m => {
-                    const mDate = new Date(m.utcDate);
-                    const dia = mDate.toLocaleDateString('pt-BR') === hojeStr ? "Hoje" : (mDate > agora ? "Amanhã" : "Ontem");
-                    html += `
-                        <div class="card">
-                            <span class="league">🏆 ${m.competition.name}</span>
-                            <span class="teams">${m.homeTeam.name} vs ${m.awayTeam.name}</span>
-                            <span class="schedule">${dia} - ${mDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                        </div>`;
+                    const odd = realOdds[m.homeTeam.name];
+                    html += `<div class="card"><span class="odd-badge">@ ${odd}</span><span class="teams">${m.homeTeam.name} vs ${m.awayTeam.name}</span><span class="schedule">Confirmado para Over 1.5</span></div>`;
                 });
                 html += `</div>`;
-            } else if (currentTab === 'res' && finalizado) {
-                let isWin = true;
-                const dataRef = new Date(group[0].utcDate).toLocaleDateString('pt-BR');
-                let resHtml = `<div class="group-container"><div class="group-header">RESULTADOS - ${dataRef}</div>`;
+            } else {
+                let win = group.every(m => ((m.score.fullTime.home ?? 0) + (m.score.fullTime.away ?? 0)) >= 2);
+                win ? tG++ : tR++;
+                let resH = `<div class="group-container"><div class="group-header">RESUMO DA ANÁLISE - ${new Date(group[0].utcDate).toLocaleDateString()}</div>`;
                 group.forEach(m => {
-                    let gols = (m.score.fullTime.home ?? 0) + (m.score.fullTime.away ?? 0);
-                    if (gols < 2) isWin = false;
-                    resHtml += `
-                        <div class="card" style="border-left: 4px solid ${gols >= 2 ? 'var(--neon)' : 'var(--red)'}">
-                            <span class="league">${m.competition.name}</span>
-                            <span class="teams">${m.homeTeam.name} ${m.score.fullTime.home}-${m.score.fullTime.away} ${m.awayTeam.name}</span>
-                        </div>`;
+                    const g = (m.score.fullTime.home ?? 0) + (m.score.fullTime.away ?? 0);
+                    resH += `<div class="card" style="border-left:4px solid ${g>=2?'var(--neon)':'var(--red)'}"><span class="teams">${m.homeTeam.name} ${m.score.fullTime.home}-${m.score.fullTime.away} ${m.awayTeam.name}</span></div>`;
                 });
-                resHtml += `<div class="group-footer" style="color:${isWin ? 'var(--neon)' : 'var(--red)'}">
-                    ${isWin ? 'GREEN ✅' : 'RED ❌'}
-                </div></div>`;
-                html = resHtml + html;
+                resH += `<div class="group-footer" style="color:${win?'var(--neon)':'var(--red)'}">${win?'SUCESSO ✅':'FALHOU ❌'}</div></div>`;
+                html = resH + html;
             }
         }
-
-        document.getElementById('count-green').innerText = totalGreen;
-        document.getElementById('count-red').innerText = totalRed;
-        box.innerHTML = html || '<div style="text-align:center;padding:50px;opacity:0.3">Aguardando dados...</div>';
+        document.getElementById('count-green').innerText = tG;
+        document.getElementById('count-red').innerText = tR;
+        box.innerHTML = html || '<div style="text-align:center;padding:50px;opacity:0.3">Nenhum jogo passou nos critérios de análise para hoje.</div>';
     }
 
     loadData();
-    setInterval(loadData, 60000);
+    setInterval(loadData, 120000);
 </script>
 </body>
 </html>
