@@ -3,179 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Elite Hunter - Odd 1.85</title>
+    <title>Scanner Elite - 48h</title>
     <style>
-        :root { --neon: #00ff88; --blue: #00d9ff; --bg: #0a0c10; --card: #161b22; --red: #ff4444; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; text-align: center; }
-        
-        .header { position: sticky; top: 0; background: var(--bg); padding: 15px; border-bottom: 2px solid var(--neon); z-index: 100; }
+        :root { --neon: #00ff88; --bg: #0a0c10; --card: #161b22; --red: #ff4444; --blue: #00d9ff; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; }
+        .header { position: sticky; top: 0; background: var(--bg); padding: 15px; border-bottom: 2px solid var(--neon); text-align: center; z-index: 100; }
         .nav { display: flex; gap: 8px; max-width: 450px; margin: 0 auto; }
-        .nav-btn { flex: 1; padding: 12px; background: #222; border: none; color: #888; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
-        .nav-btn.active { background: var(--neon); color: #000; box-shadow: 0 0 15px var(--neon); }
-
-        .stats-bar { display: none; flex-direction: column; align-items: center; background: #1f2937; padding: 15px; margin: 10px auto; max-width: 400px; border-radius: 10px; border: 1px solid #333; }
-        .stats-row { display: flex; justify-content: space-around; width: 100%; margin-bottom: 10px; }
-        .stat-val { font-size: 1.4rem; font-weight: 900; }
-        .stat-label { font-size: 0.7rem; color: #aaa; text-transform: uppercase; }
-        .profit-box { border-top: 1px solid #444; width: 100%; padding-top: 10px; }
-
-        .container { max-width: 450px; margin: 0 auto; padding: 10px; }
-        .card { background: var(--card); border-left: 5px solid var(--neon); margin-bottom: 12px; padding: 15px; border-radius: 8px; text-align: left; transition: all 0.5s ease; }
+        .nav-btn { flex: 1; padding: 12px; background: #222; border: none; color: #888; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        .nav-btn.active { background: var(--neon); color: #000; }
         
+        .container { max-width: 450px; margin: 0 auto; padding: 10px; }
         .group-container { border: 2px solid #333; margin-bottom: 25px; border-radius: 12px; overflow: hidden; background: #0d1117; }
-        .group-header { background: #1f2937; padding: 8px; font-size: 0.75rem; color: var(--blue); text-align: center; border-bottom: 1px solid #333; font-weight: bold; }
-        .group-footer { padding: 12px; font-weight: 900; font-size: 1.1rem; background: #161b22; }
-
-        .league { color: var(--neon); font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block; }
-        .teams { font-size: 1.15rem; font-weight: 900; display: block; margin-bottom: 8px; color: #fff; }
-        .time-badge { background: var(--red); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 5px; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.5; } }
+        .group-header { background: #1f2937; padding: 10px; font-size: 0.85rem; color: var(--blue); text-align: center; border-bottom: 1px solid #333; font-weight: bold; }
+        
+        .card { background: var(--card); padding: 15px; border-bottom: 1px solid #222; text-align: center; }
+        .league { color: var(--neon); font-size: 0.7rem; font-weight: 900; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        .teams { font-size: 1.1rem; font-weight: 900; display: block; margin: 5px 0; }
+        .schedule { font-size: 0.8rem; color: #aaa; font-weight: bold; }
+        
+        .group-footer { padding: 12px; font-weight: 900; text-align: center; background: #161b22; font-size: 1.1rem; }
     </style>
 </head>
 <body>
 
 <div class="header">
     <div class="nav">
-        <button id="btn-gols" class="nav-btn active" onclick="setTab('gols')">APOSTAS DO DIA</button>
+        <button id="btn-gols" class="nav-btn active" onclick="setTab('gols')">HOJE E AMANHÃ</button>
         <button id="btn-res" class="nav-btn" onclick="setTab('res')">RESULTADOS</button>
     </div>
 </div>
 
-<div id="stats-header" class="stats-bar">
-    <div class="stats-row">
-        <div style="text-align:center"><span id="total-green" class="stat-val" style="color:var(--neon)">0</span><br><span class="stat-label">Bilhetes ✅</span></div>
-        <div style="text-align:center"><span id="total-red" class="stat-val" style="color:var(--red)">0</span><br><span class="stat-label">Bilhetes ❌</span></div>
-    </div>
-    <div class="profit-box">
-        <span id="total-profit" class="stat-val">R$ 0,00</span><br>
-        <span class="stat-label">Lucro Líquido (Odd 1.85)</span>
-    </div>
-</div>
-
 <div id="display" class="container">
-    <div style="padding:40px; opacity:0.5">Sincronizando AO VIVO...</div>
+    <div style="padding:50px; text-align:center; opacity:0.5;">Sincronizando jogos (48h)...</div>
 </div>
 
 <script>
     const API_KEY = '9aad45346ed6479c9255ee70aab28f05';
     const PROXY = 'https://corsproxy.io/?'; 
-    
     let matches = [];
     let currentTab = 'gols';
 
     function setTab(t) {
         currentTab = t;
-        document.getElementById('btn-gols').className = t === 'gols' ? 'nav-btn active' : 'nav-btn';
-        document.getElementById('btn-res').className = t === 'res' ? 'nav-btn active' : 'nav-btn';
-        document.getElementById('stats-header').style.display = (t === 'res') ? 'flex' : 'none';
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        if(t === 'gols') document.getElementById('btn-gols').classList.add('active');
+        else document.getElementById('btn-res').classList.add('active');
         render();
     }
 
-    async function load() {
+    async function loadData() {
         const d = new Date();
         const hoje = d.toISOString().split('T')[0];
-        d.setDate(d.getDate() - 1);
-        const ontem = d.toISOString().split('T')[0];
-        d.setDate(d.getDate() + 2);
-        const amanha = d.toISOString().split('T')[0];
+        
+        const dAmanha = new Date();
+        dAmanha.setDate(d.getDate() + 1);
+        const amanha = dAmanha.toISOString().split('T')[0];
 
-        const url = `https://api.football-data.org/v4/matches?dateFrom=${ontem}&dateTo=${amanha}`;
+        // Busca o intervalo de 2 dias: HOJE e AMANHÃ
+        const url = `https://api.football-data.org/v4/matches?dateFrom=${hoje}&dateTo=${amanha}`;
         
         try {
-            const r = await fetch(PROXY + encodeURIComponent(url), { headers: { 'X-Auth-Token': API_KEY } });
-            const data = await r.json();
-            matches = (data.matches || []).sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
-            render();
-        } catch (e) { console.error("Erro na carga"); }
+            const response = await fetch(PROXY + encodeURIComponent(url), {
+                headers: { 'X-Auth-Token': API_KEY }
+            });
+            const data = await response.json();
+            
+            if (data.matches) {
+                // Ordena por horário e data
+                matches = data.matches.sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+                render();
+            }
+        } catch (e) {
+            document.getElementById('display').innerHTML = '<div style="text-align:center;padding:50px;color:red">Erro de conexão.</div>';
+        }
     }
 
     function render() {
         const box = document.getElementById('display');
-        let greenB = 0, redB = 0, profit = 0;
+        let html = '';
         const agora = new Date();
-        const hojeLocal = agora.toLocaleDateString('pt-BR');
 
-        let validMatches = matches.filter(m => {
-            const dataJogo = new Date(m.utcDate).toLocaleDateString('pt-BR');
-            return m.id % 10 >= 4 && dataJogo === hojeLocal;
-        });
-
-        let finalHtml = '';
-
-        for (let i = 0; i < validMatches.length; i += 3) {
-            let group = validMatches.slice(i, i + 3);
+        for (let i = 0; i < matches.length; i += 3) {
+            let group = matches.slice(i, i + 3);
             if (group.length < 3) continue;
 
-            let bilheteFinalizado = group.every(m => m.status === 'FINISHED' || m.status === 'POSTPONED');
+            let finalizado = group.every(m => m.status === 'FINISHED' || (agora - new Date(m.utcDate)) / 60000 > 130);
 
-            if (currentTab === 'gols') {
-                if (!bilheteFinalizado) {
-                    const horaPrimeiro = new Date(group[0].utcDate).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                    let html = `<div class="group-container"><div class="group-header">HORÁRIO DO PRIMEIRO JOGO: ${horaPrimeiro}</div>`;
+            if (currentTab === 'gols' && !finalizado) {
+                const dataRef = new Date(group[0].utcDate).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+                html += `<div class="group-container"><div class="group-header">BILHETE - INÍCIO ${dataRef}</div>`;
+                
+                group.forEach(m => {
+                    const dataObj = new Date(m.utcDate);
+                    const dia = dataObj.getDate() === agora.getDate() ? "Hoje" : "Amanhã";
+                    const hora = dataObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                     
-                    group.forEach(m => {
-                        const inicio = new Date(m.utcDate);
-                        const diff = Math.floor((agora - inicio) / 60000);
-                        
-                        // NOVO: Se a hora do jogo chegou ou passou, consideramos AO VIVO (até 120min)
-                        let isLiveForce = (diff >= 0 && diff < 120 && m.status !== 'FINISHED');
-                        let scH = m.score.fullTime.home ?? 0;
-                        let scA = m.score.fullTime.away ?? 0;
-                        let horaJogo = inicio.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                        
-                        let tempoTexto = "";
-                        if(isLiveForce) {
-                             if (diff <= 45) {
-                                 tempoTexto = diff + "'";
-                             } else if (diff > 45 && diff <= 60) {
-                                 tempoTexto = "INT"; 
-                             } else {
-                                 tempoTexto = (diff - 15) + "'"; 
-                             }
-                        }
+                    html += `
+                        <div class="card">
+                            <span class="league">🏆 ${m.competition.name}</span>
+                            <span class="teams">${m.homeTeam.name} vs ${m.awayTeam.name}</span>
+                            <span class="schedule">${dia} - ${hora}</span>
+                        </div>`;
+                });
+                html += `</div>`;
+            } else if (currentTab === 'res' && finalizado) {
+                let green = true;
+                let resHtml = `<div class="group-container"><div class="group-header">RESULTADOS</div>`;
+                
+                group.forEach(m => {
+                    let gols = (m.score.fullTime.home ?? 0) + (m.score.fullTime.away ?? 0);
+                    if (gols < 2) green = false;
+                    resHtml += `
+                        <div class="card" style="border-left: 4px solid ${gols >= 2 ? 'var(--neon)' : 'var(--red)'}">
+                            <span class="league">${m.competition.name}</span>
+                            <span class="teams">${m.homeTeam.name} ${m.score.fullTime.home}-${m.score.fullTime.away} ${m.awayTeam.name}</span>
+                        </div>`;
+                });
 
-                        let placarOuX = isLiveForce ? `${scH} - ${scA}` : `x`;
-                        let teamsText = `${horaJogo} | ${m.homeTeam.name} ${placarOuX} ${m.awayTeam.name}`;
-                        
-                        html += `
-                            <div class="card" style="margin-bottom:0; border-radius:0; border-bottom:1px solid #222; border-left-color: ${isLiveForce ? 'var(--blue)' : 'var(--neon)'}">
-                                <span class="league">🏆 ${m.competition.name}</span>
-                                <span class="teams">${teamsText} ${tempoTexto ? `<span class="time-badge">${tempoTexto}</span>` : ''}</span>
-                                <span style="color:var(--blue); font-size:0.85rem;">${isLiveForce ? '● AO VIVO' : 'Aguardando Início'}</span>
-                            </div>`;
-                    });
-                    html += `<div class="group-footer" style="color:var(--neon); font-size:0.8rem; text-align:center">JOGOS MAIS DE 1.5 GOLS</div></div>`;
-                    finalHtml += html;
-                }
-            } else {
-                if (bilheteFinalizado) {
-                    let winB = true;
-                    let html = `<div class="group-container"><div class="group-header">FINALIZADO HOJE</div>`;
-                    group.forEach(m => {
-                        const gols = (m.score.fullTime.home ?? 0) + (m.score.fullTime.away ?? 0);
-                        if (gols < 2) winB = false;
-                        html += `
-                            <div class="card" style="margin-bottom:0; border-radius:0; border-left-color: ${gols >= 2 ? 'var(--neon)' : 'var(--red)'}">
-                                <span class="league">🏆 ${m.competition.name}</span>
-                                <span class="teams">${m.homeTeam.name} ${m.score.fullTime.home}-${m.score.fullTime.away} ${m.awayTeam.name}</span>
-                            </div>`;
-                    });
-                    if(winB) { greenB++; profit += 85; } else { redB++; profit -= 100; }
-                    html += `<div class="group-footer" style="color:${winB ? 'var(--neon)' : 'var(--red)'}; text-align:center">${winB ? 'GREEN ✅ + R$ 85' : 'RED ❌ - R$ 100'}</div></div>`;
-                    finalHtml = html + finalHtml;
-                }
+                resHtml += `<div class="group-footer" style="color:${green ? 'var(--neon)' : 'var(--red)'}">
+                    ${green ? 'GREEN ✅' : 'RED ❌'}
+                </div></div>`;
+                html = resHtml + html;
             }
         }
 
-        box.innerHTML = finalHtml || '<div style="opacity:0.3;padding:50px">Sem apostas para o momento.</div>';
-        document.getElementById('total-green').innerText = greenB;
-        document.getElementById('total-red').innerText = redB;
-        document.getElementById('total-profit').innerText = `R$ ${profit.toFixed(2)}`;
-        document.getElementById('total-profit').style.color = profit >= 0 ? 'var(--neon)' : 'var(--red)';
+        box.innerHTML = html || '<div style="text-align:center;padding:50px;opacity:0.3">Buscando bilhetes...</div>';
     }
 
-    load();
-    setInterval(load, 15000); 
+    loadData();
+    setInterval(loadData, 60000);
 </script>
 </body>
 </html>
