@@ -18,15 +18,20 @@ function nav(t) {
 
 async function call(path) {
     try {
-        const r = await fetch(PROXY + encodeURIComponent(`https://api.football-data.org/v4${path}`), {
+        const url = `https://api.football-data.org/v4${path}`;
+        const r = await fetch(PROXY + encodeURIComponent(url), {
             headers: { 'X-Auth-Token': KEY }
         });
         if(r.status === 429) { 
+            console.warn("Limite de API atingido. Aguardando...");
             await new Promise(s => setTimeout(s, 30000)); 
             return call(path); 
         }
-        return await r.json();
+        const res = await r.json();
+        console.log(`Resposta para ${path}:`, res); // Para você depurar no F12
+        return res;
     } catch(e) { 
+        console.error("Erro na chamada:", e);
         return null; 
     }
 }
@@ -41,17 +46,21 @@ async function checkTrend(id, type) {
 }
 
 async function start() {
-    const data = await call(`/matches`);
+    // CORREÇÃO: Força a busca pela data de hoje no formato YYYY-MM-DD
+    const hoje = new Date().toISOString().split('T')[0];
+    document.getElementById('status').innerText = "Conectando à API...";
+    
+    const data = await call(`/matches?dateFrom=${hoje}&dateTo=${hoje}`);
     const matches = data?.matches || [];
     
     if(matches.length === 0) {
-        document.getElementById('status').innerText = "Nenhum jogo encontrado para hoje.";
+        document.getElementById('status').innerText = "Nenhum jogo encontrado para: " + hoje;
         return;
     }
 
     for(let i=0; i<matches.length; i++) {
         const m = matches[i];
-        document.getElementById('status').innerText = `Analisando Hoje: ${m.homeTeam.shortName} x ${m.awayTeam.shortName}`;
+        document.getElementById('status').innerText = `Analisando: ${m.homeTeam.shortName} x ${m.awayTeam.shortName}`;
         document.getElementById('bar-fill').style.width = `${((i+1)/matches.length)*100}%`;
         
         await new Promise(r => setTimeout(r, DELAY));
@@ -71,17 +80,19 @@ async function start() {
             }
         }
     }
-    document.getElementById('status').innerText = "Busca de Hoje Finalizada!";
+    document.getElementById('status').innerText = "Análise concluída!";
 }
 
 function renderBilhetes() {
     const container = document.getElementById('lista-bilhetes');
     container.innerHTML = "";
+    if(validados.length === 0) return;
+
     for (let i = 0; i < validados.length; i += 3) {
         const grupo = validados.slice(i, i + 3);
         container.innerHTML += `
             <div class="bilhete-grupo">
-                <div class="bilhete-header">Bilhete do Dia - Over 1.5</div>
+                <div class="bilhete-header">Sugestão Over 1.5</div>
                 ${grupo.map(j => `
                     <div class="jogo-item">
                         <span class="teams">${j.homeTeam.name} vs ${j.awayTeam.name}</span>
@@ -125,4 +136,5 @@ function filterRes(f) {
     }).join('');
 }
 
+// Inicia a busca
 start();
