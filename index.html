@@ -3,182 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Real-Time Elite</title>
+    <title>Scanner Elite - Histórico 48h</title>
     <style>
         :root { --neon: #00ff88; --bg: #0a0c10; --card: #161b22; --red: #ff4444; --blue: #00d9ff; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; }
         
-        .tabs { display: flex; background: #1a1f26; position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid #333; }
-        .tab-btn { flex: 1; padding: 15px; border: none; background: none; color: #888; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .tab-btn.active { color: var(--neon); border-bottom: 3px solid var(--neon); }
-
-        .header-stats { display: flex; gap: 10px; padding: 15px; max-width: 450px; margin: 0 auto; }
-        .stat-box { flex: 1; background: var(--card); padding: 12px; border-radius: 10px; text-align: center; border-bottom: 4px solid #333; cursor: pointer; }
-        .stat-box.g { border-color: var(--neon); }
-        .stat-box.r { border-color: var(--red); }
-        .val { font-size: 1.6rem; font-weight: 900; display: block; }
-        .lab { font-size: 0.55rem; color: #888; text-transform: uppercase; }
+        .tabs { display: flex; background: #1a1f26; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 1000; }
+        .tab-btn { flex: 1; padding: 15px; border: none; background: none; color: #888; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 0.75rem; }
+        .tab-btn.active { color: var(--neon); border-bottom: 3px solid var(--neon); background: rgba(0, 255, 136, 0.05); }
 
         .monitor { background: var(--card); margin: 15px; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #333; }
-        #status-text { font-weight: bold; color: var(--blue); font-size: 0.85rem; display: block; margin-bottom: 10px; }
-        .bar-bg { height: 8px; background: #000; border-radius: 4px; overflow: hidden; }
-        #bar-fill { height: 100%; width: 0%; background: var(--neon); transition: 0.3s; }
-
+        #bar-fill { height: 8px; width: 0%; background: var(--neon); border-radius: 4px; transition: 0.4s; display: block; margin-top: 10px; }
+        
         .container { padding: 10px; max-width: 450px; margin: 0 auto; }
-        .bilhete { background: #0d1117; border: 1px solid #333; border-radius: 12px; margin-bottom: 12px; overflow: hidden; border-left: 4px solid var(--neon); animation: slideIn 0.3s ease; }
-        .jogo { padding: 15px; text-align: center; }
-        .teams { font-weight: bold; font-size: 1rem; margin-bottom: 5px; }
-        .liga { font-size: 0.65rem; color: #888; text-transform: uppercase; display: block; margin-bottom: 10px; }
-        .badge { font-size: 0.7rem; font-weight: bold; color: var(--neon); border: 1px solid var(--neon); padding: 2px 8px; border-radius: 4px; }
+        
+        /* Bilhetes */
+        .bilhete-grupo { background: #1c2128; border: 2px solid var(--neon); border-radius: 15px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,255,136,0.2); }
+        .bilhete-header { background: var(--neon); color: #000; padding: 5px; text-align: center; font-weight: 900; font-size: 0.8rem; }
+        .jogo-item { padding: 15px; border-bottom: 1px dashed #444; text-align: center; }
+        .teams { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; display: block; }
+        .datetime { font-size: 0.7rem; color: var(--blue); font-weight: bold; }
+        .debug-info { font-size: 0.6rem; color: var(--neon); margin-top: 5px; opacity: 0.8; }
 
-        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Aba Resultados */
+        .header-stats { display: flex; gap: 10px; margin-bottom: 15px; }
+        .stat-box { flex: 1; background: var(--card); padding: 12px; border-radius: 10px; text-align: center; border-bottom: 4px solid #333; cursor: pointer; }
+        .res-card { background: #0d1117; border: 1px solid #333; border-radius: 10px; margin-bottom: 8px; padding: 12px; border-left: 4px solid #333; }
+        .res-date { font-size: 0.6rem; color: #666; display: block; margin-bottom: 4px; }
+        
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
 <div class="tabs">
-    <button id="btn-analise" class="tab-btn active" onclick="changeTab('analise')">Jogos Reais</button>
-    <button id="btn-resultados" class="tab-btn" onclick="changeTab('resultados')">Histórico/Filtro</button>
+    <button id="btn-scan" class="tab-btn active" onclick="nav('scan')">Scanner 5/6</button>
+    <button id="btn-res" class="tab-btn" onclick="nav('res')">Resultados (48h)</button>
 </div>
 
-<div id="panel-analise">
+<div id="panel-scan">
     <div class="monitor">
-        <span id="status-text">Conectando ao Servidor de Dados...</span>
-        <div class="bar-bg"><div id="bar-fill"></div></div>
-        <small id="debug-info" style="color: #666; font-size: 10px; margin-top: 5px; display: block;">Analisando Ligas Principais</small>
+        <span id="status">Buscando Jogos...</span>
+        <div style="background:#000; border-radius:4px;"><div id="bar-fill"></div></div>
     </div>
-    <div id="container-analise" class="container"></div>
+    <div id="lista-bilhetes" class="container"></div>
 </div>
 
-<div id="panel-resultados" class="hidden">
-    <div class="header-stats">
-        <div class="stat-box g" onclick="applyFilter('green')"><span id="total-green" class="val" style="color: var(--neon);">0</span><span class="lab">Ver Greens</span></div>
-        <div class="stat-box r" onclick="applyFilter('red')"><span id="total-red" class="val" style="color: var(--red);">0</span><span class="lab">Ver Reds</span></div>
+<div id="panel-res" class="hidden">
+    <div class="container">
+        <div class="header-stats">
+            <div class="stat-box" onclick="filterRes('green')" style="border-color:var(--neon)"><span id="total-green" style="color:var(--neon); font-size:1.5rem; font-weight:900;">0</span><br><small>GREENS</small></div>
+            <div class="stat-box" onclick="filterRes('red')" style="border-color:var(--red)"><span id="total-red" style="color:var(--red); font-size:1.5rem; font-weight:900;">0</span><br><small>REDS</small></div>
+        </div>
+        <div id="lista-resultados"></div>
     </div>
-    <div id="lista-resultados" class="container"></div>
 </div>
 
 <script>
-    const TOKEN = '4a55a7bee4c840678777337e86f8431a';
+    const KEY = '4a55a7bee4c840678777337e86f8431a'; 
     const PROXY = 'https://corsproxy.io/?';
-    const WAIT = 9800; // Tempo de segurança para a API real
+    const DELAY = 9000;
 
-    let gamesFound = [];
-    let pastGames = [];
+    let validados = [];
+    let historicoData = [];
 
-    function changeTab(t) {
-        document.getElementById('panel-analise').classList.toggle('hidden', t !== 'analise');
-        document.getElementById('panel-resultados').classList.toggle('hidden', t !== 'resultados');
-        document.getElementById('btn-analise').classList.toggle('active', t === 'analise');
-        document.getElementById('btn-resultados').classList.toggle('active', t === 'resultados');
-        if (t === 'resultados' && pastGames.length === 0) fetchPastResults();
+    function nav(t) {
+        document.getElementById('panel-scan').classList.toggle('hidden', t !== 'scan');
+        document.getElementById('panel-res').classList.toggle('hidden', t !== 'res');
+        if(t === 'res') loadHistory();
     }
 
-    async function request(path) {
-        const url = `https://api.football-data.org/v4${path}`;
+    async function call(path) {
         try {
-            const r = await fetch(PROXY + encodeURIComponent(url), { headers: { 'X-Auth-Token': TOKEN } });
-            if (r.status === 429) { await new Promise(res => setTimeout(res, 30000)); return request(path); }
+            const r = await fetch(PROXY + encodeURIComponent(`https://api.football-data.org/v4${path}`), {
+                headers: { 'X-Auth-Token': KEY }
+            });
+            if(r.status === 429) { await new Promise(s => setTimeout(s, 30000)); return call(path); }
             return await r.json();
         } catch(e) { return null; }
     }
 
-    // ANALISA O HISTÓRICO REAL DOS TIMES
-    async function validateTeam(id, type) {
-        const data = await request(`/teams/${id}/matches?status=FINISHED&limit=30`);
-        if (!data || !data.matches) return false;
-
-        const matches = data.matches.filter(m => type === 'HOME' ? m.homeTeam.id === id : m.awayTeam.id === id).slice(-6);
-        if (matches.length < 6) return false;
-
-        const over15 = matches.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
-        return over15 >= 5;
+    async function checkTrend(id, type) {
+        const d = await call(`/teams/${id}/matches?status=FINISHED&limit=80`);
+        if(!d || !d.matches) return { ok: false, val: "0/0" };
+        const filtered = d.matches.filter(m => type === 'HOME' ? m.homeTeam.id === id : m.awayTeam.id === id).slice(-6);
+        if(filtered.length < 6) return { ok: false, val: "N/A" };
+        const count = filtered.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
+        return { ok: count >= 5, val: `${count}/6` };
     }
 
-    async function startScanner() {
-        const today = new Date().toISOString().split('T')[0];
-        const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-        
-        // Busca jogos REAIS da grade de hoje e amanhã
-        const data = await request(`/matches?dateFrom=${today}&dateTo=${tomorrow}`);
-        const schedule = data?.matches || [];
-
-        if (schedule.length === 0) {
-            document.getElementById('status-text').innerText = "Sem jogos na grade hoje.";
-            return;
-        }
-
-        for (let i = 0; i < schedule.length; i++) {
-            const m = schedule[i];
-            document.getElementById('status-text').innerText = `🔎 Analisando: ${m.homeTeam.name}`;
-            document.getElementById('bar-fill').style.width = `${((i+1)/schedule.length)*100}%`;
-
-            await new Promise(r => setTimeout(r, WAIT));
-
-            const hOk = await validateTeam(m.homeTeam.id, 'HOME');
-            if (hOk) {
-                await new Promise(r => setTimeout(r, WAIT));
-                const aOk = await validateTeam(m.awayTeam.id, 'AWAY');
-                if (aOk) {
-                    gamesFound.push(m);
-                    renderGames();
+    async function start() {
+        const data = await call(`/matches`);
+        const matches = data?.matches || [];
+        for(let i=0; i<matches.length; i++) {
+            const m = matches[i];
+            document.getElementById('status').innerText = `Analisando: ${m.homeTeam.shortName} x ${m.awayTeam.shortName}`;
+            document.getElementById('bar-fill').style.width = `${((i+1)/matches.length)*100}%`;
+            await new Promise(r => setTimeout(r, DELAY));
+            const hT = await checkTrend(m.homeTeam.id, 'HOME');
+            if(hT.ok) {
+                await new Promise(r => setTimeout(r, DELAY));
+                const aT = await checkTrend(m.awayTeam.id, 'AWAY');
+                if(aT.ok) {
+                    const dateObj = new Date(m.utcDate);
+                    m.fData = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+                    m.fHora = dateObj.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                    m.debug = `CASA: ${hT.val} | FORA: ${aT.val}`;
+                    validados.push(m);
+                    renderBilhetes();
                 }
             }
         }
-        document.getElementById('status-text').innerText = "✅ Varredura Real Concluída!";
+        document.getElementById('status').innerText = "Busca Finalizada!";
     }
 
-    function renderGames() {
-        const div = document.getElementById('container-analise');
-        div.innerHTML = gamesFound.map(g => `
-            <div class="bilhete">
-                <div class="jogo">
-                    <span class="liga">${g.competition.name}</span>
-                    <div class="teams">${g.homeTeam.name} vs ${g.awayTeam.name}</div>
-                    <span class="badge">ESTRATÉGIA 5/6 VALIDADA</span>
-                </div>
-            </div>
-        `).join('');
+    function renderBilhetes() {
+        const container = document.getElementById('lista-bilhetes');
+        container.innerHTML = "";
+        for (let i = 0; i < validados.length; i += 3) {
+            const grupo = validados.slice(i, i + 3);
+            container.innerHTML += `
+                <div class="bilhete-grupo">
+                    <div class="bilhete-header">Bilhete Sugerido</div>
+                    ${grupo.map(j => `
+                        <div class="jogo-item">
+                            <span class="teams">${j.homeTeam.name} vs ${j.awayTeam.name}</span>
+                            <span class="datetime">📅 ${j.fData} - ⏰ ${j.fHora}</span>
+                            <div class="debug-info">${j.debug}</div>
+                        </div>
+                    `).join('')}
+                </div>`;
+        }
     }
 
-    async function fetchPastResults() {
-        const list = document.getElementById('lista-resultados');
-        const d1 = new Date(Date.now() - 172800000).toISOString().split('T')[0];
-        const d2 = new Date().toISOString().split('T')[0];
-        const data = await request(`/matches?dateFrom=${d1}&dateTo=${d2}`);
+    async function loadHistory() {
+        if(historicoData.length > 0) return;
         
-        pastGames = (data?.matches || []).filter(m => m.status === 'FINISHED').reverse();
-        applyFilter('all');
+        // Calcula as datas (Hoje e Ontem)
+        const hoje = new Date();
+        const ontem = new Date();
+        ontem.setDate(hoje.getDate() - 1);
+        
+        const dFrom = ontem.toISOString().split('T')[0];
+        const dTo = hoje.toISOString().split('T')[0];
+
+        const res = await call(`/matches?dateFrom=${dFrom}&dateTo=${dTo}`);
+        historicoData = (res?.matches || []).filter(m => m.status === 'FINISHED').reverse();
+        filterRes('all');
     }
 
-    function applyFilter(f) {
-        const list = document.getElementById('lista-resultados');
-        let filtered = pastGames;
-        if(f === 'green') filtered = pastGames.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2);
-        if(f === 'red') filtered = pastGames.filter(m => (m.score.fullTime.home + m.score.fullTime.away) < 2);
+    function filterRes(f) {
+        const div = document.getElementById('lista-resultados');
+        let filtered = historicoData;
+        if(f === 'green') filtered = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2);
+        if(f === 'red') filtered = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) < 2);
 
-        let g = pastGames.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
-        let r = pastGames.length - g;
-        document.getElementById('total-green').innerText = g;
-        document.getElementById('total-red').innerText = r;
+        document.getElementById('total-green').innerText = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
+        document.getElementById('total-red').innerText = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) < 2).length;
 
-        list.innerHTML = filtered.map(m => {
-            const score = m.score.fullTime;
-            const win = (score.home + score.away) >= 2;
+        div.innerHTML = filtered.map(m => {
+            const isG = (m.score.fullTime.home + m.score.fullTime.away) >= 2;
+            const dt = new Date(m.utcDate).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
             return `
-            <div class="bilhete" style="border-left-color: ${win ? '#00ff88' : '#ff4444'}">
-                <div class="jogo">
-                    <div class="teams">${m.homeTeam.name} ${score.home} x ${score.away} ${m.awayTeam.name}</div>
-                    <span style="color:${win ? '#00ff88':'#ff4444'}; font-weight:bold; font-size:12px;">
-                        ${win ? '✅ GREEN' : '❌ RED'} (Total: ${score.home+score.away})
-                    </span>
-                </div>
-            </div>`;
+                <div class="res-card" style="border-left-color: ${isG ? 'var(--neon)' : 'var(--red)'}">
+                    <span class="res-date">${dt}</span>
+                    <div class="teams" style="font-size:0.8rem">${m.homeTeam.name} ${m.score.fullTime.home} x ${m.score.fullTime.away} ${m.awayTeam.name}</div>
+                </div>`;
         }).join('');
     }
 
-    startScanner();
+    start();
 </script>
 </body>
 </html>
