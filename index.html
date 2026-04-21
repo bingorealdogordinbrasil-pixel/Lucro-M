@@ -7,34 +7,25 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div class="tabs">
-    <button id="btn-scan" class="tab-btn active" onclick="nav('scan')">Jogos do Dia</button>
-    <button id="btn-res" class="tab-btn" onclick="nav('res')">Resultados</button>
-</div>
-
-<div id="panel-scan">
-    <div class="monitor">
-        <span id="status">Iniciando Scanner...</span>
-        <div style="background:#000; border-radius:4px;"><div id="bar-fill"></div></div>
+    <div class="tabs">
+        <button id="btn-scan" class="tab-btn active" onclick="nav('scan')">Jogos do Dia</button>
+        <button id="btn-res" class="tab-btn" onclick="nav('res')">Resultados</button>
     </div>
-    <div id="lista-bilhetes" class="container"></div>
-</div>
 
-<div id="panel-res" class="hidden">
-    <div class="container">
-        <div class="header-stats">
-            <div class="stat-box" onclick="filterRes('green')" style="border-color:var(--neon)">
-                <span id="total-green" style="color:var(--neon); font-size:1.5rem; font-weight:900;">0</span><br><small>GREENS</small>
-            </div>
-            <div class="stat-box" onclick="filterRes('red')" style="border-color:var(--red)">
-                <span id="total-red" style="color:var(--red); font-size:1.5rem; font-weight:900;">0</span><br><small>REDS</small>
-            </div>
+    <div id="panel-scan">
+        <div class="monitor">
+            <span id="status">Iniciando Scanner...</span>
+            <div style="background:#000; border-radius:4px;"><div id="bar-fill"></div></div>
         </div>
-        <div id="lista-resultados"></div>
+        <div id="lista-bilhetes" class="container"></div>
     </div>
-</div>
 
-<script src="script.js"></script>
+    <div id="panel-res" class="hidden">
+        <div class="container">
+            <div id="lista-resultados"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
