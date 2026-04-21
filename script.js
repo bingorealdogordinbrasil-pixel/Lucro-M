@@ -1,6 +1,6 @@
 const KEY = 'A00e8d526df64a348a623f6bd5e74282'; 
-const PROXY = 'https://corsproxy.io/?';
-const DELAY = 8500; 
+const PROXY = 'https://api.allorigins.win/raw?url='; // Mudei para um proxy mais estável
+const DELAY = 8000; 
 
 let validados = [];
 let historicoData = [];
@@ -19,48 +19,48 @@ function nav(t) {
 async function call(path) {
     try {
         const url = `https://api.football-data.org/v4${path}`;
-        const r = await fetch(PROXY + encodeURIComponent(url), {
+        const response = await fetch(PROXY + encodeURIComponent(url), {
             headers: { 'X-Auth-Token': KEY }
         });
         
-        if(r.status === 429) { 
-            await new Promise(s => setTimeout(s, 15000)); 
-            return call(path); 
+        if (response.status === 429) {
+            console.log("Limite atingido, esperando...");
+            await new Promise(resolve => setTimeout(resolve, 30000));
+            return call(path);
         }
         
-        return await r.json();
-    } catch(e) { 
-        return null; 
+        return await response.json();
+    } catch (e) {
+        console.error("Erro na API:", e);
+        return null;
     }
 }
 
 async function checkTrend(id, type) {
     const d = await call(`/teams/${id}/matches?status=FINISHED&limit=80`);
     if(!d || !d.matches) return { ok: false, val: "0/0" };
-    
     const filtered = d.matches.filter(m => type === 'HOME' ? m.homeTeam.id === id : m.awayTeam.id === id).slice(-6);
     if(filtered.length < 6) return { ok: false, val: "N/A" };
-    
     const count = filtered.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
     return { ok: count >= 5, val: `${count}/6` };
 }
 
 async function start() {
-    const statusTxt = document.getElementById('status');
-    statusTxt.innerText = "Buscando jogos...";
-
-    // Busca apenas jogos programados para hoje
+    const status = document.getElementById('status');
+    status.innerText = "Buscando jogos de hoje...";
+    
+    // Tenta buscar os jogos do dia atual
     const data = await call(`/matches`);
     const matches = data?.matches || [];
     
     if(matches.length === 0) {
-        statusTxt.innerText = "Sem jogos das ligas principais hoje.";
+        status.innerText = "Nenhum jogo encontrado nas ligas principais agora.";
         return;
     }
 
     for(let i=0; i<matches.length; i++) {
         const m = matches[i];
-        statusTxt.innerText = `Analisando: ${m.homeTeam.shortName} x ${m.awayTeam.shortName}`;
+        status.innerText = `Analisando: ${m.homeTeam.shortName} x ${m.awayTeam.shortName}`;
         document.getElementById('bar-fill').style.width = `${((i+1)/matches.length)*100}%`;
         
         await new Promise(r => setTimeout(r, DELAY));
@@ -80,13 +80,12 @@ async function start() {
             }
         }
     }
-    statusTxt.innerText = "Scanner Finalizado!";
+    status.innerText = "Scanner Finalizado!";
 }
 
 function renderBilhetes() {
     const container = document.getElementById('lista-bilhetes');
     container.innerHTML = "";
-    
     for (let i = 0; i < validados.length; i += 3) {
         const grupo = validados.slice(i, i + 3);
         container.innerHTML += `
@@ -133,5 +132,4 @@ function filterRes(f) {
     }).join('');
 }
 
-// Inicialização
 start();
