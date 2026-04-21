@@ -22,16 +22,14 @@ async function call(path) {
         const r = await fetch(PROXY + encodeURIComponent(url), {
             headers: { 'X-Auth-Token': KEY }
         });
+        
         if(r.status === 429) { 
-            console.warn("Limite de API atingido. Aguardando...");
-            await new Promise(s => setTimeout(s, 30000)); 
+            await new Promise(s => setTimeout(s, 15000)); 
             return call(path); 
         }
-        const res = await r.json();
-        console.log(`Resposta para ${path}:`, res); // Para você depurar no F12
-        return res;
+        
+        return await r.json();
     } catch(e) { 
-        console.error("Erro na chamada:", e);
         return null; 
     }
 }
@@ -39,28 +37,30 @@ async function call(path) {
 async function checkTrend(id, type) {
     const d = await call(`/teams/${id}/matches?status=FINISHED&limit=80`);
     if(!d || !d.matches) return { ok: false, val: "0/0" };
+    
     const filtered = d.matches.filter(m => type === 'HOME' ? m.homeTeam.id === id : m.awayTeam.id === id).slice(-6);
     if(filtered.length < 6) return { ok: false, val: "N/A" };
+    
     const count = filtered.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
     return { ok: count >= 5, val: `${count}/6` };
 }
 
 async function start() {
-    // CORREÇÃO: Força a busca pela data de hoje no formato YYYY-MM-DD
-    const hoje = new Date().toISOString().split('T')[0];
-    document.getElementById('status').innerText = "Conectando à API...";
-    
-    const data = await call(`/matches?dateFrom=${hoje}&dateTo=${hoje}`);
+    const statusTxt = document.getElementById('status');
+    statusTxt.innerText = "Buscando jogos...";
+
+    // Busca apenas jogos programados para hoje
+    const data = await call(`/matches`);
     const matches = data?.matches || [];
     
     if(matches.length === 0) {
-        document.getElementById('status').innerText = "Nenhum jogo encontrado para: " + hoje;
+        statusTxt.innerText = "Sem jogos das ligas principais hoje.";
         return;
     }
 
     for(let i=0; i<matches.length; i++) {
         const m = matches[i];
-        document.getElementById('status').innerText = `Analisando: ${m.homeTeam.shortName} x ${m.awayTeam.shortName}`;
+        statusTxt.innerText = `Analisando: ${m.homeTeam.shortName} x ${m.awayTeam.shortName}`;
         document.getElementById('bar-fill').style.width = `${((i+1)/matches.length)*100}%`;
         
         await new Promise(r => setTimeout(r, DELAY));
@@ -80,19 +80,18 @@ async function start() {
             }
         }
     }
-    document.getElementById('status').innerText = "Análise concluída!";
+    statusTxt.innerText = "Scanner Finalizado!";
 }
 
 function renderBilhetes() {
     const container = document.getElementById('lista-bilhetes');
     container.innerHTML = "";
-    if(validados.length === 0) return;
-
+    
     for (let i = 0; i < validados.length; i += 3) {
         const grupo = validados.slice(i, i + 3);
         container.innerHTML += `
             <div class="bilhete-grupo">
-                <div class="bilhete-header">Sugestão Over 1.5</div>
+                <div class="bilhete-header">Bilhete Sugerido - Over 1.5</div>
                 ${grupo.map(j => `
                     <div class="jogo-item">
                         <span class="teams">${j.homeTeam.name} vs ${j.awayTeam.name}</span>
@@ -106,24 +105,22 @@ function renderBilhetes() {
 
 async function loadHistory() {
     if(historicoData.length > 0) return;
-    const hoje = new Date();
-    const ontem = new Date();
-    ontem.setDate(hoje.getDate() - 1);
-    const dFrom = ontem.toISOString().split('T')[0];
-    const dTo = hoje.toISOString().split('T')[0];
-    const res = await call(`/matches?dateFrom=${dFrom}&dateTo=${dTo}`);
-    historicoData = (res?.matches || []).filter(m => m.status === 'FINISHED').reverse();
+    const res = await call(`/matches?status=FINISHED`);
+    historicoData = (res?.matches || []).reverse();
 }
 
 function filterRes(f) {
     const div = document.getElementById('lista-resultados');
     let filtered = historicoData;
     
-    if(f === 'green') filtered = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2);
-    if(f === 'red') filtered = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) < 2);
+    const greens = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2);
+    const reds = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) < 2);
 
-    document.getElementById('total-green').innerText = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
-    document.getElementById('total-red').innerText = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) < 2).length;
+    document.getElementById('total-green').innerText = greens.length;
+    document.getElementById('total-red').innerText = reds.length;
+
+    if(f === 'green') filtered = greens;
+    if(f === 'red') filtered = reds;
 
     div.innerHTML = filtered.map(m => {
         const isG = (m.score.fullTime.home + m.score.fullTime.away) >= 2;
@@ -136,5 +133,5 @@ function filterRes(f) {
     }).join('');
 }
 
-// Inicia a busca
+// Inicialização
 start();
