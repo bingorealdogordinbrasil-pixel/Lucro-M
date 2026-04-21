@@ -1,87 +1,128 @@
-    const API_KEY = '9aad45346ed6479c9255ee70aab28f05';
-    const PROXY = 'https://corsproxy.io/?'; 
-    
-    let matches = [];
-    let currentTab = 'gols';
+const KEY = 'A00e8d526df64a348a623f6bd5e74282'; 
+const PROXY = 'https://corsproxy.io/?';
+const DELAY = 8500; 
 
-    function setTab(t) {
-        currentTab = t;
-        document.getElementById('btn-gols').className = t === 'gols' ? 'nav-btn active' : 'nav-btn';
-        document.getElementById('btn-res').className = t === 'res' ? 'nav-btn active' : 'nav-btn';
-        document.getElementById('stats-header').style.display = (t === 'res') ? 'flex' : 'none';
-        render();
+let validados = [];
+let historicoData = [];
+
+function nav(t) {
+    document.getElementById('panel-scan').classList.toggle('hidden', t !== 'scan');
+    document.getElementById('panel-res').classList.toggle('hidden', t !== 'res');
+    document.getElementById('btn-scan').classList.toggle('active', t === 'scan');
+    document.getElementById('btn-res').classList.toggle('active', t === 'res');
+    
+    if(t === 'res') {
+        loadHistory().then(() => filterRes('all'));
+    }
+}
+
+async function call(path) {
+    try {
+        const r = await fetch(PROXY + encodeURIComponent(`https://api.football-data.org/v4${path}`), {
+            headers: { 'X-Auth-Token': KEY }
+        });
+        if(r.status === 429) { 
+            await new Promise(s => setTimeout(s, 30000)); 
+            return call(path); 
+        }
+        return await r.json();
+    } catch(e) { 
+        return null; 
+    }
+}
+
+async function checkTrend(id, type) {
+    const d = await call(`/teams/${id}/matches?status=FINISHED&limit=80`);
+    if(!d || !d.matches) return { ok: false, val: "0/0" };
+    const filtered = d.matches.filter(m => type === 'HOME' ? m.homeTeam.id === id : m.awayTeam.id === id).slice(-6);
+    if(filtered.length < 6) return { ok: false, val: "N/A" };
+    const count = filtered.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
+    return { ok: count >= 5, val: `${count}/6` };
+}
+
+async function start() {
+    const data = await call(`/matches`);
+    const matches = data?.matches || [];
+    
+    if(matches.length === 0) {
+        document.getElementById('status').innerText = "Nenhum jogo encontrado para hoje.";
+        return;
     }
 
-    async function load() {
-        // Ajuste de datas: de 2 dias atrás até 2 dias no futuro
-        const past = new Date(); past.setDate(past.getDate() - 2);
-        const future = new Date(); future.setDate(future.getDate() + 2);
+    for(let i=0; i<matches.length; i++) {
+        const m = matches[i];
+        document.getElementById('status').innerText = `Analisando Hoje: ${m.homeTeam.shortName} x ${m.awayTeam.shortName}`;
+        document.getElementById('bar-fill').style.width = `${((i+1)/matches.length)*100}%`;
         
-        const dateFrom = past.toISOString().split('T')[0];
-        const dateTo = future.toISOString().split('T')[0];
+        await new Promise(r => setTimeout(r, DELAY));
+        const hT = await checkTrend(m.homeTeam.id, 'HOME');
         
-        const url = `https://api.football-data.org/v4/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`;
-        
-        try {
-            const r = await fetch(PROXY + encodeURIComponent(url), { headers: { 'X-Auth-Token': API_KEY } });
-            const d = await r.json();
-            
-            // Ordenar matches pela data (mais recentes primeiro para os resultados)
-            matches = (d.matches || []).sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate));
-            
-            render();
-        } catch (e) {
-            document.getElementById('display').innerHTML = '<div style="color:red;padding:20px">Erro de conexão.</div>';
+        if(hT.ok) {
+            await new Promise(r => setTimeout(r, DELAY));
+            const aT = await checkTrend(m.awayTeam.id, 'AWAY');
+
+            if(aT.ok) {
+                const dateObj = new Date(m.utcDate);
+                m.fData = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+                m.fHora = dateObj.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                m.debug = `CASA: ${hT.val} | FORA: ${aT.val}`;
+                validados.push(m);
+                renderBilhetes();
+            }
         }
     }
+    document.getElementById('status').innerText = "Busca de Hoje Finalizada!";
+}
 
-    function render() {
-        const box = document.getElementById('display');
-        box.innerHTML = ''; 
-        let gCount = 0, rCount = 0;
-
-        matches.forEach(m => {
-            const league = m.competition ? m.competition.name : "Liga";
-            const h = m.homeTeam.name;
-            const a = m.awayTeam.name;
-            const dateObj = new Date(m.utcDate);
-            const date = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-            const time = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            // Filtro de exibição (mantendo sua lógica de ID % 10 >= 4)
-            if (m.id % 10 >= 4) {
-                if (currentTab === 'gols' && m.status !== 'FINISHED') {
-                    box.innerHTML += `
-                        <div class="card">
-                            <span class="league">🏆 ${league}</span>
-                            <span class="teams">${h} x ${a}</span>
-                            <span class="date-time">📅 ${date} - ⏰ ${time}</span>
-                        </div>`;
-                } else if (currentTab === 'res' && m.status === 'FINISHED') {
-                    const scH = m.score.fullTime.home ?? 0;
-                    const scA = m.score.fullTime.away ?? 0;
-                    const isGreen = (scH + scA >= 2); // Regra 1.5 gols
-                    
-                    isGreen ? gCount++ : rCount++;
-                    
-                    box.innerHTML += `
-                        <div class="card" style="border-left-color: ${isGreen ? 'var(--neon)' : 'var(--red)'}">
-                            <span class="league">🏆 ${league}</span>
-                            <span class="teams">${h} ${scH} - ${scA} ${a}</span>
-                            <span class="date-time">📅 ${date} - ⏰ ${time}</span>
-                            <div class="res-badge ${isGreen ? 'green-bg' : 'red-bg'}">
-                                ${isGreen ? 'GREEN ✅' : 'RED ❌'}
-                            </div>
-                        </div>`;
-                }
-            }
-        });
-
-        document.getElementById('total-green').innerText = gCount;
-        document.getElementById('total-red').innerText = rCount;
-        
-        if(box.innerHTML === '') box.innerHTML = '<div style="opacity:0.3;padding:50px">Sem dados para este período.</div>';
+function renderBilhetes() {
+    const container = document.getElementById('lista-bilhetes');
+    container.innerHTML = "";
+    for (let i = 0; i < validados.length; i += 3) {
+        const grupo = validados.slice(i, i + 3);
+        container.innerHTML += `
+            <div class="bilhete-grupo">
+                <div class="bilhete-header">Bilhete do Dia - Over 1.5</div>
+                ${grupo.map(j => `
+                    <div class="jogo-item">
+                        <span class="teams">${j.homeTeam.name} vs ${j.awayTeam.name}</span>
+                        <span class="datetime">📅 ${j.fData} - ⏰ ${j.fHora}</span>
+                        <div class="debug-info">${j.debug}</div>
+                    </div>
+                `).join('')}
+            </div>`;
     }
+}
 
-    load();
-    setInterval(load, 60000);
+async function loadHistory() {
+    if(historicoData.length > 0) return;
+    const hoje = new Date();
+    const ontem = new Date();
+    ontem.setDate(hoje.getDate() - 1);
+    const dFrom = ontem.toISOString().split('T')[0];
+    const dTo = hoje.toISOString().split('T')[0];
+    const res = await call(`/matches?dateFrom=${dFrom}&dateTo=${dTo}`);
+    historicoData = (res?.matches || []).filter(m => m.status === 'FINISHED').reverse();
+}
+
+function filterRes(f) {
+    const div = document.getElementById('lista-resultados');
+    let filtered = historicoData;
+    
+    if(f === 'green') filtered = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2);
+    if(f === 'red') filtered = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) < 2);
+
+    document.getElementById('total-green').innerText = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
+    document.getElementById('total-red').innerText = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) < 2).length;
+
+    div.innerHTML = filtered.map(m => {
+        const isG = (m.score.fullTime.home + m.score.fullTime.away) >= 2;
+        const dt = new Date(m.utcDate).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+        return `
+            <div class="res-card" style="border-left-color: ${isG ? 'var(--neon)' : 'var(--red)'}">
+                <span class="res-date">${dt}</span>
+                <div class="teams" style="font-size:0.8rem">${m.homeTeam.name} ${m.score.fullTime.home} x ${m.score.fullTime.away} ${m.awayTeam.name}</div>
+            </div>`;
+    }).join('');
+}
+
+start();
