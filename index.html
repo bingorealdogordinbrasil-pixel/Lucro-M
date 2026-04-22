@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Elite - Jogos do Dia</title>
+    <title>Scanner Elite - Over 1.5 FT & 0.5 HT</title>
     <style>
-        :root { --neon: #00ff88; --bg: #0a0c10; --card: #161b22; --red: #ff4444; --blue: #00d9ff; }
+        :root { --neon: #00ff88; --bg: #0a0c10; --card: #161b22; --red: #ff4444; --blue: #00d9ff; --gold: #ffcc00; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; }
         
         .tabs { display: flex; background: #1a1f26; border-bottom: 1px solid #333; position: sticky; top: 0; z-index: 1000; }
@@ -17,17 +17,24 @@
         
         .container { padding: 10px; max-width: 450px; margin: 0 auto; }
         
-        .bilhete-grupo { background: #1c2128; border: 2px solid var(--neon); border-radius: 15px; margin-bottom: 20px; overflow: hidden; }
-        .bilhete-header { background: var(--neon); color: #000; padding: 5px; text-align: center; font-weight: 900; font-size: 0.8rem; }
+        .bilhete-grupo { background: #1c2128; border: 2px solid var(--neon); border-radius: 15px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,255,136,0.1); }
+        .bilhete-header { background: var(--neon); color: #000; padding: 8px; text-align: center; font-weight: 900; font-size: 0.8rem; text-transform: uppercase; }
         .jogo-item { padding: 15px; border-bottom: 1px dashed #444; text-align: center; }
-        .teams { font-weight: bold; font-size: 0.95rem; display: block; }
+        .teams { font-weight: bold; font-size: 0.95rem; display: block; margin-bottom: 4px; }
         .datetime { font-size: 0.7rem; color: var(--blue); font-weight: bold; }
-        .debug-info { font-size: 0.6rem; color: var(--neon); margin-top: 5px; opacity: 0.8; }
+        
+        .stats-grid { display: flex; justify-content: center; gap: 10px; margin-top: 8px; }
+        .stat-tag { font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; background: #000; border: 1px solid #444; }
+        .stat-tag b { color: var(--gold); }
 
-        .header-stats { display: flex; gap: 10px; margin-bottom: 15px; }
-        .stat-box { flex: 1; background: var(--card); padding: 12px; border-radius: 10px; text-align: center; border-bottom: 4px solid #333; cursor: pointer; transition: 0.2s; }
-        .res-card { background: #0d1117; border: 1px solid #333; border-radius: 10px; margin-bottom: 8px; padding: 12px; border-left: 4px solid #333; }
-        .res-date { font-size: 0.6rem; color: #666; display: block; margin-bottom: 4px; }
+        .live-status { margin-top: 10px; padding-top: 8px; border-top: 1px solid #333; display: flex; justify-content: center; gap: 15px; font-size: 0.8rem; font-weight: bold; }
+        .win { color: var(--neon); }
+        .loss { color: var(--red); }
+
+        .header-stats { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .stat-row { display: flex; gap: 8px; }
+        .stat-box { flex: 1; background: var(--card); padding: 10px 5px; border-radius: 10px; text-align: center; border-bottom: 4px solid #333; cursor: pointer; }
+        .res-card { background: #0d1117; border: 1px solid #333; border-radius: 10px; margin-bottom: 8px; padding: 12px; }
         
         .hidden { display: none !important; }
     </style>
@@ -35,13 +42,13 @@
 <body>
 
 <div class="tabs">
-    <button id="btn-scan" class="tab-btn active" onclick="nav('scan')">Jogos do Dia</button>
+    <button id="btn-scan" class="tab-btn active" onclick="nav('scan')">Análise Hoje</button>
     <button id="btn-res" class="tab-btn" onclick="nav('res')">Resultados</button>
 </div>
 
 <div id="panel-scan">
     <div class="monitor">
-        <span id="status">Buscando Jogos de Hoje...</span>
+        <span id="status">Iniciando Varredura...</span>
         <div style="background:#000; border-radius:4px;"><div id="bar-fill"></div></div>
     </div>
     <div id="lista-bilhetes" class="container"></div>
@@ -50,11 +57,24 @@
 <div id="panel-res" class="hidden">
     <div class="container">
         <div class="header-stats">
-            <div class="stat-box" onclick="filterRes('green')" style="border-color:var(--neon)">
-                <span id="total-green" style="color:var(--neon); font-size:1.5rem; font-weight:900;">0</span><br><small>GREENS</small>
+            <div class="stat-row">
+                <div class="stat-box" onclick="filterRes('all')" style="border-color:#888">
+                    <span style="color:#fff; font-size:1.1rem; font-weight:900;">ALL</span><br><small>TODOS (3D)</small>
+                </div>
+                <div class="stat-box" onclick="filterRes('green')" style="border-color:var(--neon)">
+                    <span id="total-green" style="color:var(--neon); font-size:1.1rem; font-weight:900;">0</span><br><small>COMBO GREEN</small>
+                </div>
+                <div class="stat-box" onclick="filterRes('red')" style="border-color:var(--red)">
+                    <span id="total-red" style="color:var(--red); font-size:1.1rem; font-weight:900;">0</span><br><small>COMBO RED</small>
+                </div>
             </div>
-            <div class="stat-box" onclick="filterRes('red')" style="border-color:var(--red)">
-                <span id="total-red" style="color:var(--red); font-size:1.5rem; font-weight:900;">0</span><br><small>REDS</small>
+            <div class="stat-row">
+                <div class="stat-box" onclick="filterRes('ht-green')" style="border-color:var(--blue)">
+                    <span id="ht-only-green" style="color:var(--blue); font-size:1.1rem; font-weight:900;">0</span><br><small>HT 0.5 ✅</small>
+                </div>
+                <div class="stat-box" onclick="filterRes('ht-red')" style="border-color:var(--gold)">
+                    <span id="ht-only-red" style="color:var(--gold); font-size:1.1rem; font-weight:900;">0</span><br><small>HT 0.5 ❌</small>
+                </div>
             </div>
         </div>
         <div id="lista-resultados"></div>
@@ -74,10 +94,7 @@
         document.getElementById('panel-res').classList.toggle('hidden', t !== 'res');
         document.getElementById('btn-scan').classList.toggle('active', t === 'scan');
         document.getElementById('btn-res').classList.toggle('active', t === 'res');
-        
-        if(t === 'res') {
-            loadHistory().then(() => filterRes('all'));
-        }
+        if(t === 'res') loadHistory().then(() => filterRes('all'));
     }
 
     async function call(path) {
@@ -92,46 +109,44 @@
 
     async function checkTrend(id, type) {
         const d = await call(`/teams/${id}/matches?status=FINISHED&limit=80`);
-        if(!d || !d.matches) return { ok: false, val: "0/0" };
+        if(!d || !d.matches) return { ok: false };
         const filtered = d.matches.filter(m => type === 'HOME' ? m.homeTeam.id === id : m.awayTeam.id === id).slice(-6);
-        if(filtered.length < 6) return { ok: false, val: "N/A" };
-        const count = filtered.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
-        return { ok: count >= 5, val: `${count}/6` };
+        if(filtered.length < 6) return { ok: false };
+        const countFT = filtered.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
+        const countHT = filtered.filter(m => (m.score.halfTime.home + m.score.halfTime.away) >= 1).length;
+        return { ok: countFT >= 5 && countHT >= 4, ft: `${countFT}/6`, ht: `${countHT}/6` };
     }
 
     async function start() {
-        // Puxa apenas os jogos do dia (comportamento padrão da rota /matches)
         const data = await call(`/matches`);
         const matches = data?.matches || [];
-        
-        if(matches.length === 0) {
-            document.getElementById('status').innerText = "Nenhum jogo encontrado para hoje.";
-            return;
-        }
+        if(matches.length === 0) { document.getElementById('status').innerText = "Sem jogos."; return; }
 
         for(let i=0; i<matches.length; i++) {
             const m = matches[i];
-            document.getElementById('status').innerText = `Analisando Hoje: ${m.homeTeam.shortName} x ${m.awayTeam.shortName}`;
+            document.getElementById('status').innerText = `Lendo: ${m.homeTeam.shortName} x ${m.awayTeam.shortName}`;
             document.getElementById('bar-fill').style.width = `${((i+1)/matches.length)*100}%`;
             
             await new Promise(r => setTimeout(r, DELAY));
-            const hT = await checkTrend(m.homeTeam.id, 'HOME');
+            const casa = await checkTrend(m.homeTeam.id, 'HOME');
             
-            if(hT.ok) {
+            if(casa.ok) {
                 await new Promise(r => setTimeout(r, DELAY));
-                const aT = await checkTrend(m.awayTeam.id, 'AWAY');
-
-                if(aT.ok) {
-                    const dateObj = new Date(m.utcDate);
-                    m.fData = dateObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-                    m.fHora = dateObj.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-                    m.debug = `CASA: ${hT.val} | FORA: ${aT.val}`;
-                    validados.push(m);
+                const fora = await checkTrend(m.awayTeam.id, 'AWAY');
+                if(fora.ok) {
+                    const d = new Date(m.utcDate);
+                    validados.push({
+                        ...m,
+                        fData: d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}),
+                        fHora: d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}),
+                        statsCasa: casa,
+                        statsFora: fora
+                    });
                     renderBilhetes();
                 }
             }
         }
-        document.getElementById('status').innerText = "Busca de Hoje Finalizada!";
+        document.getElementById('status').innerText = "Análise Finalizada!";
     }
 
     function renderBilhetes() {
@@ -141,47 +156,59 @@
             const grupo = validados.slice(i, i + 3);
             container.innerHTML += `
                 <div class="bilhete-grupo">
-                    <div class="bilhete-header">Bilhete do Dia - Over 1.5</div>
-                    ${grupo.map(j => `
-                        <div class="jogo-item">
-                            <span class="teams">${j.homeTeam.name} vs ${j.awayTeam.name}</span>
-                            <span class="datetime">📅 ${j.fData} - ⏰ ${j.fHora}</span>
-                            <div class="debug-info">${j.debug}</div>
-                        </div>
-                    `).join('')}
+                    <div class="bilhete-header">Combo: Over 1.5 FT + HT</div>
+                    ${grupo.map(j => {
+                        const totalFT = (j.score?.fullTime?.home + j.score?.fullTime?.away);
+                        const totalHT = (j.score?.halfTime?.home + j.score?.halfTime?.away);
+                        const isFinished = j.status === 'FINISHED';
+                        let htmlStatus = "";
+                        if(isFinished) {
+                            const winHT = totalHT >= 1;
+                            const winFT = totalFT >= 2;
+                            htmlStatus = `<div class="live-status"><span class="${winHT ? 'win' : 'loss'}">HT 0.5: ${winHT ? '⬆️' : '❌'}</span><span class="${winFT ? 'win' : 'loss'}">FT 1.5: ${winFT ? '⬆️' : '❌'}</span></div>`;
+                        }
+                        return `<div class="jogo-item"><span class="teams">${j.homeTeam.name} ${isFinished ? `<b>${j.score.fullTime.home}-${j.score.fullTime.away}</b>` : 'vs'} ${j.awayTeam.name}</span><span class="datetime">📅 ${j.fData} às ${j.fHora}</span><div class="stats-grid"><span class="stat-tag">🏠 FT: <b>${j.statsCasa.ft}</b> HT: <b>${j.statsCasa.ht}</b></span><span class="stat-tag">✈️ FT: <b>${j.statsFora.ft}</b> HT: <b>${j.statsFora.ht}</b></span></div>${htmlStatus}</div>`;
+                    }).join('')}
                 </div>`;
         }
     }
 
     async function loadHistory() {
         if(historicoData.length > 0) return;
-        const hoje = new Date();
-        const ontem = new Date();
-        ontem.setDate(hoje.getDate() - 1);
-        const dFrom = ontem.toISOString().split('T')[0];
-        const dTo = hoje.toISOString().split('T')[0];
-        const res = await call(`/matches?dateFrom=${dFrom}&dateTo=${dTo}`);
+        // Calcula a data de 3 dias atrás
+        const dataInicio = new Date();
+        dataInicio.setDate(dataInicio.getDate() - 3);
+        const dataFim = new Date();
+        
+        const fStr = (d) => d.toISOString().split('T')[0];
+        
+        const res = await call(`/matches?dateFrom=${fStr(dataInicio)}&dateTo=${fStr(dataFim)}`);
         historicoData = (res?.matches || []).filter(m => m.status === 'FINISHED').reverse();
     }
 
     function filterRes(f) {
         const div = document.getElementById('lista-resultados');
-        let filtered = historicoData;
-        
-        if(f === 'green') filtered = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2);
-        if(f === 'red') filtered = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) < 2);
+        const htGreens = historicoData.filter(m => (m.score.halfTime.home + m.score.halfTime.away) >= 1);
+        const comboGreens = historicoData.filter(m => (m.score.halfTime.home + m.score.halfTime.away) >= 1 && (m.score.fullTime.home + m.score.fullTime.away) >= 2);
 
-        document.getElementById('total-green').innerText = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) >= 2).length;
-        document.getElementById('total-red').innerText = historicoData.filter(m => (m.score.fullTime.home + m.score.fullTime.away) < 2).length;
+        document.getElementById('total-green').innerText = comboGreens.length;
+        document.getElementById('total-red').innerText = historicoData.length - comboGreens.length;
+        document.getElementById('ht-only-green').innerText = htGreens.length;
+        document.getElementById('ht-only-red').innerText = historicoData.length - htGreens.length;
+
+        let filtered = historicoData;
+        if(f === 'green') filtered = comboGreens;
+        if(f === 'red') filtered = historicoData.filter(m => !comboGreens.includes(m));
+        if(f === 'ht-green') filtered = htGreens;
+        if(f === 'ht-red') filtered = historicoData.filter(m => !htGreens.includes(m));
 
         div.innerHTML = filtered.map(m => {
-            const isG = (m.score.fullTime.home + m.score.fullTime.away) >= 2;
-            const dt = new Date(m.utcDate).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
-            return `
-                <div class="res-card" style="border-left-color: ${isG ? 'var(--neon)' : 'var(--red)'}">
-                    <span class="res-date">${dt}</span>
-                    <div class="teams" style="font-size:0.8rem">${m.homeTeam.name} ${m.score.fullTime.home} x ${m.score.fullTime.away} ${m.awayTeam.name}</div>
-                </div>`;
+            const okHT = (m.score.halfTime.home + m.score.halfTime.away) >= 1;
+            const okFT = (m.score.fullTime.home + m.score.fullTime.away) >= 2;
+            const comboOk = okHT && okFT;
+            const d = new Date(m.utcDate).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+
+            return `<div class="res-card" style="border-left: 4px solid ${comboOk ? 'var(--neon)' : 'var(--red)'}"><div style="font-size:0.6rem; color:#888; margin-bottom:4px;">DATA: ${d}</div><div class="teams" style="font-size:0.8rem">${m.homeTeam.name} <b>${m.score.fullTime.home} x ${m.score.fullTime.away}</b> ${m.awayTeam.name}</div><div class="live-status"><span class="${okHT ? 'win' : 'loss'}">HT 0.5: ${okHT ? '⬆️' : '❌'}</span><span class="${okFT ? 'win' : 'loss'}">FT 1.5: ${okFT ? '⬆️' : '❌'}</span></div></div>`;
         }).join('');
     }
 
