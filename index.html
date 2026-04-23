@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Elite - Foco HT</title>
+    <title>Scanner Elite - Resumo por Data</title>
     <style>
         :root { --neon: #00ff88; --bg: #0a0c10; --card: #161b22; --red: #ff4444; --blue: #00d9ff; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; margin: 0; }
@@ -12,27 +12,39 @@
         .tab-btn { flex: 1; padding: 15px; border: none; background: none; color: #888; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 0.75rem; transition: 0.3s; }
         .tab-btn.active { color: var(--neon); border-bottom: 3px solid var(--neon); background: rgba(0, 255, 136, 0.05); }
 
-        .monitor { background: var(--card); margin: 15px; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #333; }
-        #bar-fill { height: 8px; width: 0%; background: var(--neon); border-radius: 4px; transition: 0.4s; display: block; margin-top: 10px; }
-        
         .container { padding: 10px; max-width: 450px; margin: 0 auto; }
         
+        /* Separador de Data com Contador */
+        .date-separator { 
+            background: #21262d; 
+            padding: 10px 15px; 
+            margin: 20px 0 10px 0; 
+            border-radius: 8px; 
+            font-size: 0.75rem; 
+            font-weight: bold; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid var(--blue);
+        }
+        .date-label { color: var(--blue); text-transform: uppercase; }
+        .date-stats { font-size: 0.7rem; }
+
         .bilhete-grupo { background: #1c2128; border: 1px solid var(--neon); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
         .bilhete-header { background: rgba(0, 255, 136, 0.1); color: var(--neon); padding: 6px; text-align: center; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; }
         .jogo-item { padding: 15px; text-align: center; }
-        .teams { font-weight: bold; font-size: 1rem; display: block; margin-bottom: 4px; }
-        .datetime { font-size: 0.75rem; color: var(--blue); font-weight: bold; }
+        .teams { font-weight: bold; font-size: 0.95rem; display: block; margin-bottom: 4px; }
         
-        .header-stats { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        .stat-row { display: flex; gap: 8px; }
-        .stat-box { flex: 1; background: var(--card); padding: 10px 5px; border-radius: 10px; text-align: center; border-bottom: 4px solid #333; cursor: pointer; }
+        .header-stats { display: flex; gap: 8px; margin-bottom: 15px; }
+        .stat-box { flex: 1; background: var(--card); padding: 10px 5px; border-radius: 10px; text-align: center; border-bottom: 4px solid #333; }
         .stat-box span { font-size: 1.2rem; font-weight: 900; }
         
-        .res-card { background: #0d1117; border: 1px solid #333; border-radius: 10px; margin-bottom: 8px; padding: 12px; }
-        .live-status { margin-top: 10px; padding-top: 8px; border-top: 1px solid #333; display: flex; justify-content: center; font-size: 0.85rem; font-weight: bold; }
+        .res-card { background: #0d1117; border: 1px solid #333; border-radius: 10px; margin-bottom: 8px; padding: 12px; position: relative; }
+        .res-time { position: absolute; top: 8px; right: 10px; font-size: 0.65rem; color: #888; }
+        .live-status { margin-top: 8px; padding-top: 8px; border-top: 1px solid #222; display: flex; justify-content: center; font-size: 0.8rem; font-weight: bold; }
+        
         .win { color: var(--neon); }
         .loss { color: var(--red); }
-        
         .hidden { display: none !important; }
     </style>
 </head>
@@ -43,39 +55,25 @@
     <button id="btn-res" class="tab-btn" onclick="nav('res')">Resultados HT</button>
 </div>
 
-<div id="panel-scan">
-    <div class="monitor">
-        <span id="status">Buscando jogos de hoje...</span>
-        <div style="background:#000; border-radius:4px;"><div id="bar-fill"></div></div>
-    </div>
-    <div id="lista-bilhetes" class="container"></div>
+<div id="panel-scan" class="container">
+    <div id="lista-bilhetes"></div>
 </div>
 
-<div id="panel-res" class="hidden">
-    <div class="container">
-        <div id="loading-history" style="text-align:center; font-size:0.7rem; color:var(--blue); margin-bottom:10px; display:none;">Carregando histórico...</div>
-        <div class="header-stats">
-            <div class="stat-row">
-                <div class="stat-box" onclick="filterRes('all')" style="border-color:#888">
-                    <span id="total-all" style="color:#fff;">0</span><br><small>TOTAL</small>
-                </div>
-                <div class="stat-box" onclick="filterRes('ht')" style="border-color:var(--neon)">
-                    <span id="total-ht" style="color:var(--neon);">0</span><br><small>HT GREEN ✅</small>
-                </div>
-                <div class="stat-box" onclick="filterRes('red')" style="border-color:var(--red)">
-                    <span id="total-red" style="color:var(--red);">0</span><br><small>HT RED ❌</small>
-                </div>
-            </div>
+<div id="panel-res" class="container hidden">
+    <div class="header-stats">
+        <div class="stat-box" style="border-color:var(--neon)">
+            <span id="total-ht" style="color:var(--neon);">0</span><br><small>TOTAL G ✅</small>
         </div>
-        <div id="lista-resultados"></div>
+        <div class="stat-box" style="border-color:var(--red)">
+            <span id="total-red" style="color:var(--red);">0</span><br><small>TOTAL R ❌</small>
+        </div>
     </div>
+    <div id="lista-resultados"></div>
 </div>
 
 <script>
     const KEY = 'A00e8d526df64a348a623f6bd5e74282'; 
     const PROXY = 'https://corsproxy.io/?';
-
-    let jogosHoje = [];
     let historicoData = [];
 
     function nav(t) {
@@ -95,64 +93,78 @@
         } catch(e) { return null; }
     }
 
+    async function loadHistory() {
+        const dIni = new Date(); dIni.setDate(dIni.getDate() - 5);
+        const fStr = (d) => d.toISOString().split('T')[0];
+        const res = await call(`/matches?dateFrom=${fStr(dIni)}&dateTo=${fStr(new Date())}`);
+        historicoData = (res?.matches || []).filter(m => m.status === 'FINISHED');
+        renderResults();
+    }
+
+    function renderResults() {
+        const div = document.getElementById('lista-resultados');
+        const grupos = {};
+        let totalHTGlobal = 0;
+        let totalRedGlobal = 0;
+
+        historicoData.forEach(m => {
+            const dataChave = new Date(m.utcDate).toLocaleDateString('pt-BR');
+            if (!grupos[dataChave]) grupos[dataChave] = { jogos: [], g: 0, r: 0 };
+            
+            const isHT = (m.score.halfTime.home + m.score.halfTime.away) >= 1;
+            grupos[dataChave].jogos.push(m);
+            
+            if (isHT) { grupos[dataChave].g++; totalHTGlobal++; }
+            else { grupos[dataChave].r++; totalRedGlobal++; }
+        });
+
+        document.getElementById('total-ht').innerText = totalHTGlobal;
+        document.getElementById('total-red').innerText = totalRedGlobal;
+
+        const datasOrdenadas = Object.keys(grupos).sort((a, b) => {
+            return new Date(b.split('/').reverse().join('-')) - new Date(a.split('/').reverse().join('-'));
+        });
+
+        let html = "";
+        datasOrdenadas.forEach(data => {
+            const info = grupos[data];
+            html += `
+                <div class="date-separator">
+                    <span class="date-label">${data}</span>
+                    <span class="date-stats">
+                        <b style="color:var(--neon)">G: ${info.g}</b> | 
+                        <b style="color:var(--red)">R: ${info.r}</b>
+                    </span>
+                </div>`;
+            
+            info.jogos.sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate)).forEach(m => {
+                const hora = new Date(m.utcDate).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+                const golHT = (m.score.halfTime.home + m.score.halfTime.away) >= 1;
+
+                html += `
+                <div class="res-card" style="border-left: 4px solid ${golHT ? 'var(--neon)' : 'var(--red)'}">
+                    <div class="res-time">${hora}</div>
+                    <div class="teams">${m.homeTeam.name} <b>${m.score.fullTime.home}x${m.score.fullTime.away}</b> ${m.awayTeam.name}</div>
+                    <div class="live-status">
+                        <span class="${golHT ? 'win' : 'loss'}">HT: ${golHT ? 'GREEN ✅' : 'RED ❌'} (${m.score.halfTime.home}-${m.score.halfTime.away})</span>
+                    </div>
+                </div>`;
+            });
+        });
+        div.innerHTML = html;
+    }
+
     async function start() {
         const data = await call(`/matches`);
-        jogosHoje = data?.matches || [];
-        document.getElementById('status').innerText = `${jogosHoje.length} jogos hoje.`;
-        document.getElementById('bar-fill').style.width = "100%";
-        
-        const container = document.getElementById('lista-bilhetes');
-        container.innerHTML = jogosHoje.map(j => {
-            const d = new Date(j.utcDate);
-            return `
+        const jogos = data?.matches || [];
+        document.getElementById('lista-bilhetes').innerHTML = jogos.map(j => `
             <div class="bilhete-grupo">
                 <div class="bilhete-header">${j.competition.name}</div>
                 <div class="jogo-item">
                     <span class="teams">${j.homeTeam.name} vs ${j.awayTeam.name}</span>
-                    <span class="datetime">⏰ ${d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</span>
+                    <span style="font-size:0.75rem; color:var(--blue)">⏰ ${new Date(j.utcDate).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</span>
                 </div>
-            </div>`;
-        }).join('');
-    }
-
-    async function loadHistory() {
-        const loader = document.getElementById('loading-history');
-        loader.style.display = 'block';
-        
-        const dIni = new Date(); dIni.setDate(dIni.getDate() - 5);
-        const fStr = (d) => d.toISOString().split('T')[0];
-        const res = await call(`/matches?dateFrom=${fStr(dIni)}&dateTo=${fStr(new Date())}`);
-        
-        historicoData = (res?.matches || []).filter(m => m.status === 'FINISHED');
-        filterRes('all');
-        loader.style.display = 'none';
-    }
-
-    function filterRes(f) {
-        const div = document.getElementById('lista-resultados');
-        const listHT = historicoData.filter(m => (m.score.halfTime.home + m.score.halfTime.away) >= 1);
-        const listRed = historicoData.filter(m => (m.score.halfTime.home + m.score.halfTime.away) === 0);
-
-        document.getElementById('total-all').innerText = historicoData.length;
-        document.getElementById('total-ht').innerText = listHT.length;
-        document.getElementById('total-red').innerText = listRed.length;
-
-        let list = historicoData;
-        if(f === 'ht') list = listHT;
-        if(f === 'red') list = listRed;
-
-        div.innerHTML = list.slice().reverse().map(m => {
-            const golHT = (m.score.halfTime.home + m.score.halfTime.away) >= 1;
-
-            return `
-            <div class="res-card" style="border-left: 4px solid ${golHT ? 'var(--neon)' : 'var(--red)'}">
-                <div style="font-size:0.6rem; color:#888">${new Date(m.utcDate).toLocaleDateString('pt-BR')}</div>
-                <div class="teams" style="font-size:0.85rem">${m.homeTeam.name} <b>${m.score.fullTime.home}x${m.score.fullTime.away}</b> ${m.awayTeam.name}</div>
-                <div class="live-status">
-                    <span class="${golHT ? 'win' : 'loss'}">GOL HT: ${golHT ? 'SIM ✅' : 'NÃO ❌'} (${m.score.halfTime.home}x${m.score.halfTime.away})</span>
-                </div>
-            </div>`;
-        }).join('');
+            </div>`).join('');
     }
 
     start();
